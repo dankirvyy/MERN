@@ -29,6 +29,7 @@ exports.registerUser = async (req, res) => {
             _id: user.id,
             name: `${user.first_name} ${user.last_name}`, 
             email: user.email,
+            role: user.role, // Added role
             avatar_filename: user.avatar_filename, // Added
             phone_number: user.phone_number,   // <-- ADDED THIS LINE
             token: generateToken(user.id),
@@ -44,15 +45,19 @@ exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ where: { email: email } });
+        const user = await User.findOne({ 
+            where: { email: email },
+            attributes: ['id', 'first_name', 'last_name', 'email', 'password', 'role', 'avatar_filename', 'phone_number']
+        });
 
         if (user && (await user.matchPassword(password))) {
             res.json({
                 _id: user.id,
                 name: `${user.first_name} ${user.last_name}`,
                 email: user.email,
+                role: user.role, // Added role
                 avatar_filename: user.avatar_filename, 
-                phone_number: user.phone_number,   // <-- ADDED THIS LINE
+                phone_number: user.phone_number,
                 token: generateToken(user.id),
             });
         } else {

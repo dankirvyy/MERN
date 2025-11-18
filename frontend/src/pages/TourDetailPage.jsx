@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import LocationMap from '../components/LocationMap.jsx'; // Import our new map
+import LocationMap from '../components/LocationMap.jsx'; 
 
-// Import Leaflet CSS (needed for the map)
+
 import 'leaflet/dist/leaflet.css';
 
 function TourDetailPage() {

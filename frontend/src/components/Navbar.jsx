@@ -58,6 +58,9 @@ function Navbar() {
             <NavLink to="/rooms" className={getDesktopNavLinkClass}>Rooms</NavLink>
             <NavLink to="/tours" className={getDesktopNavLinkClass}>Tours</NavLink>
             <NavLink to="/contact" className={getDesktopNavLinkClass}>Contact</NavLink>
+            {user && user.role === 'admin' && (
+              <NavLink to="/admin/dashboard" className={getDesktopNavLinkClass}>Admin</NavLink>
+            )}
             <div className="border-l border-gray-300 h-6"></div>
 
             {/* Auth section (Login/Logout) remains the same */}
@@ -104,6 +107,9 @@ function Navbar() {
           <NavLink to="/rooms" className={getMobileNavLinkClass}>Rooms</NavLink>
           <NavLink to="/tours" className={getMobileNavLinkClass}>Tours</NavLink>
           <NavLink to="/contact" className={getMobileNavLinkClass}>Contact</NavLink>
+          {user && user.role === 'admin' && (
+            <NavLink to="/admin/dashboard" className={getMobileNavLinkClass}>Admin</NavLink>
+          )}
         </div>
         <div className="pt-4 pb-3 border-t border-gray-200">
           <div className="px-2 space-y-1">

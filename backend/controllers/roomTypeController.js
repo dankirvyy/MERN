@@ -73,3 +73,64 @@ exports.getAvailableRooms = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+// --- ADMIN FUNCTIONS ---
+
+// @desc    Create a new room type
+// @route   POST /api/room-types
+exports.createRoomType = async (req, res) => {
+    try {
+        const { name, description, base_price, capacity } = req.body;
+        
+        const roomType = await RoomType.create({
+            name,
+            description,
+            base_price,
+            capacity
+        });
+
+        res.status(201).json(roomType);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Update a room type
+// @route   PUT /api/room-types/:id
+exports.updateRoomType = async (req, res) => {
+    try {
+        const { name, description, base_price, capacity } = req.body;
+        const roomType = await RoomType.findByPk(req.params.id);
+
+        if (roomType) {
+            roomType.name = name || roomType.name;
+            roomType.description = description || roomType.description;
+            roomType.base_price = base_price || roomType.base_price;
+            roomType.capacity = capacity || roomType.capacity;
+
+            const updatedRoomType = await roomType.save();
+            res.json(updatedRoomType);
+        } else {
+            res.status(404).json({ message: 'Room type not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Delete a room type
+// @route   DELETE /api/room-types/:id
+exports.deleteRoomType = async (req, res) => {
+    try {
+        const roomType = await RoomType.findByPk(req.params.id);
+
+        if (roomType) {
+            await roomType.destroy();
+            res.json({ message: 'Room type removed' });
+        } else {
+            res.status(404).json({ message: 'Room type not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};

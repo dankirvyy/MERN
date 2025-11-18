@@ -40,6 +40,51 @@ const User = sequelize.define('User', {
     avatar_filename: {
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    // CRM Fields
+    guest_type: {
+        type: DataTypes.ENUM('new', 'regular', 'vip'),
+        defaultValue: 'new',
+    },
+    total_visits: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
+    total_revenue: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+    },
+    last_visit_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    loyalty_points: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
+    birthday: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+    },
+    country: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    notes: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    tags: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    marketing_consent: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    last_contacted_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
     }
     // <<< CONFLICTING 'created_at' and 'updated_at' BLOCKS REMOVED FROM HERE >>>
 }, {

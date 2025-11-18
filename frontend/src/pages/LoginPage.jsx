@@ -30,7 +30,17 @@ function LoginPage() {
             // This will update localStorage AND the global state
             login(response.data); 
             
-            navigate('/'); // Redirect to home
+            console.log('Login response:', response.data); // Debug
+            console.log('User role:', response.data.role); // Debug
+            
+            // Redirect based on user role
+            if (response.data.role === 'admin') {
+                console.log('Redirecting to admin dashboard'); // Debug
+                navigate('/admin/dashboard');
+            } else {
+                console.log('Redirecting to home'); // Debug
+                navigate('/');
+            }
         } catch (err) {
             setError(err.response?.data?.message || 'An error occurred.');
         }
