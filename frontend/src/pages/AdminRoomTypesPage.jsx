@@ -13,6 +13,8 @@ const AdminRoomTypesPage = () => {
         base_price: '',
         capacity: ''
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
         fetchRoomTypes();
@@ -33,15 +35,28 @@ const AdminRoomTypesPage = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
+            const formDataToSend = new FormData();
+            formDataToSend.append('name', formData.name);
+            formDataToSend.append('description', formData.description);
+            formDataToSend.append('base_price', formData.base_price);
+            formDataToSend.append('capacity', formData.capacity);
+            
+            if (imageFile) {
+                formDataToSend.append('image', imageFile);
+            }
+
             const config = {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
             };
 
             if (editingRoomType) {
-                await axios.put(`http://localhost:5001/api/room-types/${editingRoomType.id}`, formData, config);
+                await axios.put(`http://localhost:5001/api/room-types/${editingRoomType.id}`, formDataToSend, config);
                 alert('Room type updated successfully');
             } else {
-                await axios.post('http://localhost:5001/api/room-types', formData, config);
+                await axios.post('http://localhost:5001/api/room-types', formDataToSend, config);
                 alert('Room type created successfully');
             }
 
@@ -62,6 +77,9 @@ const AdminRoomTypesPage = () => {
             base_price: roomType.base_price,
             capacity: roomType.capacity
         });
+        if (roomType.image_filename) {
+            setImagePreview(`http://localhost:5001/uploads/${roomType.image_filename}`);
+        }
         setShowModal(true);
     };
 
@@ -91,6 +109,20 @@ const AdminRoomTypesPage = () => {
             capacity: ''
         });
         setEditingRoomType(null);
+        setImageFile(null);
+        setImagePreview(null);
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     if (loading) {
@@ -116,7 +148,14 @@ const AdminRoomTypesPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {roomTypes.length > 0 ? (
                     roomTypes.map((roomType) => (
-                        <div key={roomType.id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+                        <div key={roomType.id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden">
+                            {roomType.image_filename && (
+                                <img
+                                    src={`http://localhost:5001/uploads/${roomType.image_filename}`}
+                                    alt={roomType.name}
+                                    className="w-full h-48 object-cover"
+                                />
+                            )}
                             <div className="p-6">
                                 <h3 className="text-xl font-bold text-gray-800 mb-2">{roomType.name}</h3>
                                 <p className="text-gray-600 text-sm mb-4">
@@ -216,6 +255,26 @@ const AdminRoomTypesPage = () => {
                                         onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
                                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Room Image
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    {imagePreview && (
+                                        <div className="mt-3">
+                                            <img
+                                                src={imagePreview}
+                                                alt="Preview"
+                                                className="w-full h-48 object-cover rounded-lg"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex justify-end gap-4 mt-6">

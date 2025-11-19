@@ -1,6 +1,42 @@
 const RoomType = require('../models/RoomType');
 const Room = require('../models/Room'); // We need the Room model
 const { Op } = require('sequelize');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for file upload
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'roomtype-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'));
+        }
+    },
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+exports.upload = upload;
 
 // @desc    Fetch all room types (WITH SEARCH & SORT)
 // @route   GET /api/room-types
@@ -82,12 +118,18 @@ exports.createRoomType = async (req, res) => {
     try {
         const { name, description, base_price, capacity } = req.body;
         
-        const roomType = await RoomType.create({
+        const roomTypeData = {
             name,
             description,
             base_price,
             capacity
-        });
+        };
+
+        if (req.file) {
+            roomTypeData.image_filename = req.file.filename;
+        }
+        
+        const roomType = await RoomType.create(roomTypeData);
 
         res.status(201).json(roomType);
     } catch (error) {
@@ -103,10 +145,22 @@ exports.updateRoomType = async (req, res) => {
         const roomType = await RoomType.findByPk(req.params.id);
 
         if (roomType) {
+            // Delete old image if new one is uploaded
+            if (req.file && roomType.image_filename) {
+                const oldImagePath = path.join(__dirname, '../public/uploads', roomType.image_filename);
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+
             roomType.name = name || roomType.name;
             roomType.description = description || roomType.description;
             roomType.base_price = base_price || roomType.base_price;
             roomType.capacity = capacity || roomType.capacity;
+            
+            if (req.file) {
+                roomType.image_filename = req.file.filename;
+            }
 
             const updatedRoomType = await roomType.save();
             res.json(updatedRoomType);
@@ -125,6 +179,14 @@ exports.deleteRoomType = async (req, res) => {
         const roomType = await RoomType.findByPk(req.params.id);
 
         if (roomType) {
+            // Delete associated image
+            if (roomType.image_filename) {
+                const imagePath = path.join(__dirname, '../public/uploads', roomType.image_filename);
+                if (fs.existsSync(imagePath)) {
+                    fs.unlinkSync(imagePath);
+                }
+            }
+
             await roomType.destroy();
             res.json({ message: 'Room type removed' });
         } else {

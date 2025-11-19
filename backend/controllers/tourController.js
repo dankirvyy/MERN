@@ -1,5 +1,41 @@
 const Tour = require('../models/Tour');
 const { Op } = require('sequelize'); // 1. IMPORT Op FOR SEARCHING
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for file upload
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'tour-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'));
+        }
+    },
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+exports.upload = upload;
 
 // @desc    Fetch all active tours (WITH SEARCH & SORT)
 // @route   GET /api/tours
@@ -70,16 +106,29 @@ exports.getTourById = async (req, res) => {
 // @route   POST /api/tours
 exports.createTour = async (req, res) => {
     try {
-        const { name, description, price, duration, image_filename } = req.body;
+        const { name, description, price, duration, latitude, longitude, is_active } = req.body;
         
-        const tour = await Tour.create({
+        const tourData = {
             name,
             description,
             price,
             duration,
-            image_filename,
-            is_active: 1, // Default to active
-        });
+            is_active: is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0
+        };
+
+        // Only add latitude/longitude if they have valid values
+        if (latitude !== undefined && latitude !== '') {
+            tourData.latitude = latitude;
+        }
+        if (longitude !== undefined && longitude !== '') {
+            tourData.longitude = longitude;
+        }
+
+        if (req.file) {
+            tourData.image_filename = req.file.filename;
+        }
+
+        const tour = await Tour.create(tourData);
 
         res.status(201).json(tour);
     } catch (error) {
@@ -91,16 +140,31 @@ exports.createTour = async (req, res) => {
 // @route   PUT /api/tours/:id
 exports.updateTour = async (req, res) => {
     try {
-        const { name, description, price, duration, is_active, image_filename } = req.body;
+        const { name, description, price, duration, is_active, latitude, longitude } = req.body;
         const tour = await Tour.findByPk(req.params.id);
 
         if (tour) {
-            tour.name = name || tour.name;
-            tour.description = description || tour.description;
-            tour.price = price || tour.price;
-            tour.duration = duration || tour.duration;
-            tour.is_active = is_active;
-            tour.image_filename = image_filename || tour.image_filename;
+            // Delete old image if new one is uploaded
+            if (req.file && tour.image_filename) {
+                const oldImagePath = path.join(__dirname, '../public/uploads', tour.image_filename);
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+
+            if (name !== undefined) tour.name = name;
+            if (description !== undefined) tour.description = description;
+            if (price !== undefined) tour.price = price;
+            if (duration !== undefined) tour.duration = duration;
+            if (latitude !== undefined && latitude !== '') tour.latitude = latitude;
+            if (longitude !== undefined && longitude !== '') tour.longitude = longitude;
+            if (is_active !== undefined) {
+                tour.is_active = is_active === 'true' || is_active === true || is_active === 1 ? 1 : 0;
+            }
+            
+            if (req.file) {
+                tour.image_filename = req.file.filename;
+            }
 
             const updatedTour = await tour.save();
             res.json(updatedTour);
@@ -119,6 +183,14 @@ exports.deleteTour = async (req, res) => {
         const tour = await Tour.findByPk(req.params.id);
 
         if (tour) {
+            // Delete associated image
+            if (tour.image_filename) {
+                const imagePath = path.join(__dirname, '../public/uploads', tour.image_filename);
+                if (fs.existsSync(imagePath)) {
+                    fs.unlinkSync(imagePath);
+                }
+            }
+
             await tour.destroy();
             res.json({ message: 'Tour removed' });
         } else {

@@ -80,6 +80,9 @@ router.delete('/rooms/:id', adminController.deleteRoom);
 // BOOKING MANAGEMENT
 // ===================================
 router.get('/bookings', adminController.getAllBookings);
+router.get('/bookings/unassigned', adminController.getUnassignedBookings);
+router.put('/bookings/:id/assign-room', adminController.assignRoomToBooking);
+router.get('/rooms/available', adminController.getAvailableRoomsForAssignment);
 
 // Tour booking routes - specific routes FIRST
 router.get('/tour-bookings/:id/resources', adminReportsController.getTourBookingResources);
@@ -90,6 +93,6 @@ router.get('/tour-bookings/:id', (req, res, next) => {
 }, adminController.getTourBookingById);
 router.get('/tour-bookings', adminController.getAllTourBookings);
 
-console.log('Admin routes registered: bookings, tour-bookings, rooms');
+console.log('Admin routes registered: bookings, tour-bookings, rooms, front-desk');
 
 module.exports = router;

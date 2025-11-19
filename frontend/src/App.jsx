@@ -31,6 +31,7 @@ import AdminInvoicesPage from './pages/AdminInvoicesPage.jsx';
 import AdminInvoiceDetailPage from './pages/AdminInvoiceDetailPage.jsx';
 import AdminManageTourResourcesPage from './pages/AdminManageTourResourcesPage.jsx';
 import AdminResourceCalendarPage from './pages/AdminResourceCalendarPage.jsx';
+import AdminFrontDeskPage from './pages/AdminFrontDeskPage.jsx';
 
 function App() {
     const location = useLocation();
@@ -68,6 +69,7 @@ function App() {
                         <Route path="/admin/room-types" element={<AdminRoomTypesPage />} />
                         <Route path="/admin/rooms" element={<AdminRoomsPage />} />
                         <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+                        <Route path="/admin/front-desk" element={<AdminFrontDeskPage />} />
                         <Route path="/admin/tour-bookings" element={<AdminTourBookingsPage />} />
                         <Route path="/admin/tour-bookings/:id/manage-resources" element={<AdminManageTourResourcesPage />} />
                         <Route path="/admin/resources" element={<AdminResourcesPage />} />

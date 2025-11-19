@@ -602,3 +602,142 @@ exports.getTourBookingById = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+// ===================================
+// FRONT DESK - ROOM ASSIGNMENT
+// ===================================
+
+// @desc    Get unassigned bookings (bookings without room_id)
+// @route   GET /api/admin/bookings/unassigned
+// @access  Private/Admin
+exports.getUnassignedBookings = async (req, res) => {
+    try {
+        const bookings = await Booking.findAll({
+            where: {
+                room_id: null,
+                status: 'confirmed'
+            },
+            include: [
+                {
+                    model: User,
+                    as: 'Guest',
+                    attributes: ['id', 'first_name', 'last_name', 'email']
+                },
+                {
+                    model: RoomType,
+                    attributes: ['id', 'name']
+                }
+            ],
+            order: [['check_in_date', 'ASC']]
+        });
+
+        const formattedBookings = bookings.map(b => ({
+            id: b.id,
+            guest_name: `${b.Guest.first_name} ${b.Guest.last_name}`,
+            guest_email: b.Guest.email,
+            room_type_id: b.room_type_id,
+            room_type_name: b.RoomType.name,
+            check_in_date: b.check_in_date,
+            check_out_date: b.check_out_date,
+            check_in_time: b.check_in_time,
+            check_out_time: b.check_out_time,
+            status: b.status,
+            total_price: b.total_price
+        }));
+
+        res.json(formattedBookings);
+    } catch (error) {
+        console.error('getUnassignedBookings error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Get available rooms for a specific room type and date range
+// @route   GET /api/admin/rooms/available
+// @access  Private/Admin
+exports.getAvailableRoomsForAssignment = async (req, res) => {
+    try {
+        const { room_type_id, check_in, check_out } = req.query;
+
+        // Get all rooms of this type
+        const rooms = await Room.findAll({
+            where: {
+                room_type_id: room_type_id,
+                status: 'available'
+            }
+        });
+
+        // Filter out rooms that have conflicting bookings
+        const availableRooms = [];
+        
+        for (const room of rooms) {
+            const conflictingBooking = await Booking.findOne({
+                where: {
+                    room_id: room.id,
+                    status: { [Op.notIn]: ['cancelled'] },
+                    [Op.or]: [
+                        {
+                            check_in_date: {
+                                [Op.between]: [check_in, check_out]
+                            }
+                        },
+                        {
+                            check_out_date: {
+                                [Op.between]: [check_in, check_out]
+                            }
+                        },
+                        {
+                            [Op.and]: [
+                                { check_in_date: { [Op.lte]: check_in } },
+                                { check_out_date: { [Op.gte]: check_out } }
+                            ]
+                        }
+                    ]
+                }
+            });
+
+            if (!conflictingBooking) {
+                availableRooms.push(room);
+            }
+        }
+
+        res.json(availableRooms);
+    } catch (error) {
+        console.error('getAvailableRoomsForAssignment error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Assign room to a booking
+// @route   PUT /api/admin/bookings/:id/assign-room
+// @access  Private/Admin
+exports.assignRoomToBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { room_id } = req.body;
+
+        const booking = await Booking.findByPk(id);
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Verify the room exists and is available
+        const room = await Room.findByPk(room_id);
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found' });
+        }
+
+        // Update booking with room assignment
+        booking.room_id = room_id;
+        await booking.save();
+
+        // Optionally update room status
+        // room.status = 'occupied';
+        // await room.save();
+
+        res.json({ message: 'Room assigned successfully', booking });
+    } catch (error) {
+        console.error('assignRoomToBooking error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};

@@ -19,6 +19,7 @@ const AdminLayout = ({ children }) => {
         { name: 'Manage Room Types', path: '/admin/room-types', icon: '🏷️' },
         { name: 'Manage Rooms', path: '/admin/rooms', icon: '🏨' },
         { name: 'Manage Bookings', path: '/admin/bookings', icon: '📅' },
+        { name: 'Front Desk', path: '/admin/front-desk', icon: '🎯' },
         { name: 'Tour Bookings', path: '/admin/tour-bookings', icon: '🎫' },
         { name: 'Manage Resources', path: '/admin/resources', icon: '🚗' },
         { name: 'Manage Guests', path: '/admin/guests', icon: '👥' },

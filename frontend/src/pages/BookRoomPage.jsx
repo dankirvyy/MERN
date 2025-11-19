@@ -9,12 +9,12 @@ function BookRoomPage() {
     const navigate = useNavigate();
 
     const [roomType, setRoomType] = useState(null);
-    const [availableRooms, setAvailableRooms] = useState([]);
     
     // Form State
-    const [roomId, setRoomId] = useState('');
     const [checkIn, setCheckIn] = useState('');
     const [checkOut, setCheckOut] = useState('');
+    const [checkInTime, setCheckInTime] = useState('14:00');
+    const [checkOutTime, setCheckOutTime] = useState('12:00');
     
     // User Details (pre-filled)
     const [firstName, setFirstName] = useState(user ? user.name.split(' ')[0] : '');
@@ -34,9 +34,6 @@ function BookRoomPage() {
                 setLoading(true);
                 const typeRes = await axios.get(`http://localhost:5001/api/room-types/${roomTypeId}`);
                 setRoomType(typeRes.data);
-
-                const roomsRes = await axios.get(`http://localhost:5001/api/room-types/${roomTypeId}/available`);
-                setAvailableRooms(roomsRes.data);
                 setError(null);
             } catch (err) {
                 console.error(err);
@@ -48,7 +45,6 @@ function BookRoomPage() {
         fetchData();
     }, [roomTypeId]);
 
-    // --- THIS IS THE REFACTORED FUNCTION ---
     const handleSubmit = (e) => {
         e.preventDefault();
         setFormError(null);
@@ -65,7 +61,6 @@ function BookRoomPage() {
         const diffTime = Math.abs(date2 - date1);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         const totalPrice = diffDays * parseFloat(roomType.base_price);
-        const selectedRoom = availableRooms.find(r => r.id === parseInt(roomId));
 
         // --- 3. Consolidate All Data ---
         const bookingDetails = {
@@ -82,10 +77,11 @@ function BookRoomPage() {
                 base_price: roomType.base_price,
             },
             bookingData: {
-                room_id: roomId,
-                room_number: selectedRoom.room_number,
+                room_type_id: roomTypeId,
                 check_in_date: checkIn,
                 check_out_date: checkOut,
+                check_in_time: checkInTime,
+                check_out_time: checkOutTime,
                 days: diffDays,
                 total_price: totalPrice,
             }
@@ -99,7 +95,7 @@ function BookRoomPage() {
         if (!filename) {
             return 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=60';
         }
-        return `http://localhost:5001/uploads/images/${filename}`;
+        return `http://localhost:5001/uploads/${filename}`;
     };
 
     if (loading) return <div>Loading...</div>;
@@ -135,29 +131,6 @@ function BookRoomPage() {
                         <form onSubmit={handleSubmit} className="mt-6 space-y-6">
                             <input type="hidden" name="room_type_id" value={roomTypeId} />
 
-                            <div>
-                                <label htmlFor="room_id" className="block text-sm font-medium text-gray-700">Select an Available Room</label>
-                                <select 
-                                    id="room_id" 
-                                    name="room_id" 
-                                    value={roomId}
-                                    onChange={(e) => setRoomId(e.target.value)}
-                                    required 
-                                    className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
-                                >
-                                    {availableRooms.length > 0 ? (
-                                        <>
-                                            <option value="" disabled>Choose a room...</option>
-                                            {availableRooms.map(room => (
-                                                <option key={room.id} value={room.id}>{room.room_number}</option>
-                                            ))}
-                                        </>
-                                    ) : (
-                                        <option value="" disabled>No rooms of this type are available</option>
-                                    )}
-                                </select>
-                            </div>
-
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="checkin" className="block text-sm font-medium text-gray-700">Check-in Date</label>
@@ -173,6 +146,21 @@ function BookRoomPage() {
                                     />
                                 </div>
                                 <div>
+                                    <label htmlFor="checkin_time" className="block text-sm font-medium text-gray-700">Check-in Time</label>
+                                    <input 
+                                        type="time" 
+                                        name="checkin_time" 
+                                        id="checkin_time" 
+                                        value={checkInTime}
+                                        onChange={(e) => setCheckInTime(e.target.value)}
+                                        required 
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Standard check-in: 2:00 PM</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
                                     <label htmlFor="checkout" className="block text-sm font-medium text-gray-700">Check-out Date</label>
                                     <input 
                                         type="date" 
@@ -184,6 +172,19 @@ function BookRoomPage() {
                                         required 
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
                                     />
+                                </div>
+                                <div>
+                                    <label htmlFor="checkout_time" className="block text-sm font-medium text-gray-700">Check-out Time</label>
+                                    <input 
+                                        type="time" 
+                                        name="checkout_time" 
+                                        id="checkout_time" 
+                                        value={checkOutTime}
+                                        onChange={(e) => setCheckOutTime(e.target.value)}
+                                        required 
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Standard check-out: 12:00 PM</p>
                                 </div>
                             </div>
                             <hr className="border-gray-200"/>
@@ -213,8 +214,7 @@ function BookRoomPage() {
                             <div>
                                 <button 
                                     type="submit" 
-                                    className="w-full inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                    disabled={availableRooms.length === 0}
+                                    className="w-full inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                                 >
                                     Submit Reservation
                                 </button>

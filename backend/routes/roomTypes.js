@@ -6,7 +6,8 @@ const {
     getAvailableRooms,
     createRoomType,
     updateRoomType,
-    deleteRoomType
+    deleteRoomType,
+    upload
 } = require('../controllers/roomTypeController');
 
 // Public route to get all room types
@@ -19,8 +20,8 @@ router.get('/:id', getRoomTypeById);
 router.get('/:id/available', getAvailableRooms);
 
 // Admin routes (should be protected but for now they're open)
-router.post('/', createRoomType);
-router.put('/:id', updateRoomType);
+router.post('/', upload.single('image'), createRoomType);
+router.put('/:id', upload.single('image'), updateRoomType);
 router.delete('/:id', deleteRoomType);
 
 module.exports = router;

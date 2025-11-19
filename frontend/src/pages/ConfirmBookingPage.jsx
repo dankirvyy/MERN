@@ -111,10 +111,17 @@ function ConfirmBookingPage() {
             const token = JSON.parse(localStorage.getItem('user'))?.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
             const body = {
-                ...booking.bookingData,
+                room_type_id: booking.bookingData.room_type_id,
+                check_in_date: booking.bookingData.check_in_date,
+                check_out_date: booking.bookingData.check_out_date,
+                check_in_time: booking.bookingData.check_in_time,
+                check_out_time: booking.bookingData.check_out_time,
+                total_price: booking.bookingData.total_price,
                 payment_method: paymentDetails.method,
                 payment_id: paymentDetails.id 
             };
+            
+            console.log('Sending booking data:', body);
             
             await axios.post('http://localhost:5001/api/bookings/room', body, config);
             
@@ -123,7 +130,8 @@ function ConfirmBookingPage() {
             navigate('/my-profile'); // Redirect to My Profile
 
         } catch (err) {
-            console.error(err);
+            console.error('Booking error:', err);
+            console.error('Error response:', err.response?.data);
             setError(err.response?.data?.message || 'A critical error occurred. Please contact support.');
             setIsSubmitting(false);
         }
@@ -162,11 +170,16 @@ function ConfirmBookingPage() {
                                     <h3 className="text-xl font-semibold text-gray-900">Booking Details</h3>
                                     <dl className="mt-4 space-y-4">
                                         <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Room Type</dt><dd className="text-sm font-medium text-gray-900">{booking.roomTypeData.name}</dd></div>
-                                        <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Check-in</dt><dd className="text-sm font-medium text-gray-900">{formatDate(booking.bookingData.check_in_date)}</dd></div>
-                                        <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Check-out</dt><dd className="text-sm font-medium text-gray-900">{formatDate(booking.bookingData.check_out_date)}</dd></div>
+                                        <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Check-in</dt><dd className="text-sm font-medium text-gray-900">{formatDate(booking.bookingData.check_in_date)} {booking.bookingData.check_in_time ? `@ ${booking.bookingData.check_in_time}` : ''}</dd></div>
+                                        <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Check-out</dt><dd className="text-sm font-medium text-gray-900">{formatDate(booking.bookingData.check_out_date)} {booking.bookingData.check_out_time ? `@ ${booking.bookingData.check_out_time}` : ''}</dd></div>
                                         <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Duration</dt><dd className="text-sm font-medium text-gray-900">{booking.bookingData.days} night(s)</dd></div>
                                         <div className="flex justify-between border-t pt-4"><dt className="text-lg font-bold text-gray-900">Total Price</dt><dd className="text-lg font-bold text-orange-600">{formatPrice(booking.bookingData.total_price)}</dd></div>
                                     </dl>
+                                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                        <p className="text-sm text-blue-700">
+                                            <strong>Note:</strong> Your room number will be assigned by our front desk staff upon confirmation of your booking. You will be notified via email.
+                                        </p>
+                                    </div>
                                 </div>
                                 
                                 {/* Guest Information */}

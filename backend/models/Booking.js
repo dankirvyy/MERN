@@ -9,9 +9,13 @@ const Booking = sequelize.define('Booking', {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    room_id: {
+    room_type_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
+    },
+    room_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Now nullable - will be assigned by front desk
     },
     check_in_date: {
         type: DataTypes.DATEONLY,
@@ -61,8 +65,10 @@ const Booking = sequelize.define('Booking', {
 });
 
 // --- Associations ---
-// A Booking belongs to one Room
+// A Booking belongs to one Room (nullable now)
 Booking.belongsTo(Room, { foreignKey: 'room_id' });
+// A Booking belongs to one RoomType
+Booking.belongsTo(RoomType, { foreignKey: 'room_type_id' });
 // A Booking belongs to one User (Guest)
 Booking.belongsTo(User, { as: 'Guest', foreignKey: 'guest_id' });
 

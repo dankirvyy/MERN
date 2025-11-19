@@ -16,6 +16,8 @@ const AdminToursPage = () => {
         longitude: '',
         is_active: true
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
         fetchTours();
@@ -36,15 +38,31 @@ const AdminToursPage = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
+            const formDataToSend = new FormData();
+            formDataToSend.append('name', formData.name);
+            formDataToSend.append('description', formData.description);
+            formDataToSend.append('price', formData.price);
+            formDataToSend.append('duration', formData.duration);
+            formDataToSend.append('latitude', formData.latitude);
+            formDataToSend.append('longitude', formData.longitude);
+            formDataToSend.append('is_active', formData.is_active);
+            
+            if (imageFile) {
+                formDataToSend.append('image', imageFile);
+            }
+
             const config = {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
             };
 
             if (editingTour) {
-                await axios.put(`http://localhost:5001/api/tours/${editingTour.id}`, formData, config);
+                await axios.put(`http://localhost:5001/api/tours/${editingTour.id}`, formDataToSend, config);
                 alert('Tour updated successfully');
             } else {
-                await axios.post('http://localhost:5001/api/tours', formData, config);
+                await axios.post('http://localhost:5001/api/tours', formDataToSend, config);
                 alert('Tour created successfully');
             }
 
@@ -68,6 +86,9 @@ const AdminToursPage = () => {
             longitude: tour.longitude || '',
             is_active: tour.is_active
         });
+        if (tour.image_filename) {
+            setImagePreview(`http://localhost:5001/uploads/${tour.image_filename}`);
+        }
         setShowModal(true);
     };
 
@@ -100,6 +121,20 @@ const AdminToursPage = () => {
             is_active: true
         });
         setEditingTour(null);
+        setImageFile(null);
+        setImagePreview(null);
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     if (loading) {
@@ -126,6 +161,7 @@ const AdminToursPage = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
@@ -138,6 +174,19 @@ const AdminToursPage = () => {
                         {tours.length > 0 ? (
                             tours.map((tour) => (
                                 <tr key={tour.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {tour.image_filename ? (
+                                            <img
+                                                src={`http://localhost:5001/uploads/${tour.image_filename}`}
+                                                alt={tour.name}
+                                                className="w-16 h-16 object-cover rounded"
+                                            />
+                                        ) : (
+                                            <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                                                No image
+                                            </div>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         {tour.name}
                                     </td>
@@ -175,7 +224,7 @@ const AdminToursPage = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
                                     No tours found
                                 </td>
                             </tr>
@@ -264,6 +313,26 @@ const AdminToursPage = () => {
                                         onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
                                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                     />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tour Image
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    {imagePreview && (
+                                        <div className="mt-3">
+                                            <img
+                                                src={imagePreview}
+                                                alt="Preview"
+                                                className="w-full h-48 object-cover rounded-lg"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="col-span-2">
                                     <label className="flex items-center">
