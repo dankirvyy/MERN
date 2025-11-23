@@ -37,7 +37,7 @@ const AdminToursPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const formDataToSend = new FormData();
             formDataToSend.append('name', formData.name);
             formDataToSend.append('description', formData.description);
@@ -96,7 +96,7 @@ const AdminToursPage = () => {
         if (!window.confirm('Are you sure you want to delete this tour?')) return;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };

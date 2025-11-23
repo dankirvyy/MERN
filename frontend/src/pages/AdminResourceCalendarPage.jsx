@@ -23,7 +23,7 @@ const AdminResourceCalendarPage = () => {
 
     const fetchCalendarData = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` },
                 params: {

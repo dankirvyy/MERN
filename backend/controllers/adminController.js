@@ -603,6 +603,47 @@ exports.getTourBookingById = async (req, res) => {
     }
 };
 
+// @desc    Confirm tour booking (change status from pending to confirmed)
+// @route   PATCH /api/admin/tour-bookings/:id/confirm
+// @access  Private/Admin
+exports.confirmTourBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const booking = await TourBooking.findByPk(id, {
+            include: [
+                {
+                    model: User,
+                    as: 'Guest',
+                    attributes: ['first_name', 'last_name', 'email']
+                },
+                {
+                    model: Tour,
+                    attributes: ['name']
+                }
+            ]
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Tour booking not found' });
+        }
+
+        if (booking.status === 'confirmed') {
+            return res.status(400).json({ message: 'Tour booking is already confirmed' });
+        }
+
+        await booking.update({ status: 'confirmed' });
+
+        res.json({
+            message: 'Tour booking confirmed successfully',
+            booking
+        });
+    } catch (error) {
+        console.error('confirmTourBooking error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // ===================================
 // FRONT DESK - ROOM ASSIGNMENT
 // ===================================

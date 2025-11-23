@@ -10,7 +10,7 @@ const AdminGuestDetailPage = () => {
 
     const fetchGuestDetail = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -32,7 +32,7 @@ const AdminGuestDetailPage = () => {
 
     const handleRefreshMetrics = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
 
@@ -11,10 +11,16 @@ const AdminRoomTypesPage = () => {
         name: '',
         description: '',
         base_price: '',
-        capacity: ''
+        capacity: '',
+        location: '',
+        latitude: '',
+        longitude: ''
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const markerRef = useRef(null);
 
     useEffect(() => {
         fetchRoomTypes();
@@ -34,12 +40,15 @@ const AdminRoomTypesPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const formDataToSend = new FormData();
             formDataToSend.append('name', formData.name);
             formDataToSend.append('description', formData.description);
             formDataToSend.append('base_price', formData.base_price);
             formDataToSend.append('capacity', formData.capacity);
+            formDataToSend.append('location', formData.location);
+            formDataToSend.append('latitude', formData.latitude);
+            formDataToSend.append('longitude', formData.longitude);
             
             if (imageFile) {
                 formDataToSend.append('image', imageFile);
@@ -75,7 +84,10 @@ const AdminRoomTypesPage = () => {
             name: roomType.name,
             description: roomType.description || '',
             base_price: roomType.base_price,
-            capacity: roomType.capacity
+            capacity: roomType.capacity,
+            location: roomType.location || '',
+            latitude: roomType.latitude || '',
+            longitude: roomType.longitude || ''
         });
         if (roomType.image_filename) {
             setImagePreview(`http://localhost:5001/uploads/${roomType.image_filename}`);
@@ -87,7 +99,7 @@ const AdminRoomTypesPage = () => {
         if (!window.confirm('Are you sure you want to delete this room type?')) return;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -106,11 +118,21 @@ const AdminRoomTypesPage = () => {
             name: '',
             description: '',
             base_price: '',
-            capacity: ''
+            capacity: '',
+            location: '',
+            latitude: '',
+            longitude: ''
         });
         setEditingRoomType(null);
         setImageFile(null);
         setImagePreview(null);
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.remove();
+            mapInstanceRef.current = null;
+        }
+        if (markerRef.current) {
+            markerRef.current = null;
+        }
     };
 
     const handleImageChange = (e) => {
@@ -124,6 +146,66 @@ const AdminRoomTypesPage = () => {
             reader.readAsDataURL(file);
         }
     };
+
+    // Initialize map when modal opens
+    useEffect(() => {
+        if (showModal && mapRef.current && !mapInstanceRef.current) {
+            // Load Leaflet if not already loaded
+            if (!window.L) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(link);
+
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.onload = initializeMap;
+                document.body.appendChild(script);
+            } else {
+                setTimeout(initializeMap, 100);
+            }
+        }
+
+        function initializeMap() {
+            if (mapRef.current && window.L && !mapInstanceRef.current) {
+                // Center on Mindoro or existing coordinates
+                const lat = formData.latitude ? parseFloat(formData.latitude) : 13.0;
+                const lng = formData.longitude ? parseFloat(formData.longitude) : 121.2;
+                
+                const map = window.L.map(mapRef.current).setView([lat, lng], formData.latitude ? 13 : 9);
+                
+                window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(map);
+                
+                // Add existing marker if coordinates exist
+                if (formData.latitude && formData.longitude) {
+                    markerRef.current = window.L.marker([lat, lng]).addTo(map);
+                }
+                
+                // Click event to set location
+                map.on('click', function(e) {
+                    const { lat, lng } = e.latlng;
+                    
+                    // Update form data
+                    setFormData(prev => ({
+                        ...prev,
+                        latitude: lat.toFixed(8),
+                        longitude: lng.toFixed(8)
+                    }));
+                    
+                    // Remove old marker and add new one
+                    if (markerRef.current) {
+                        map.removeLayer(markerRef.current);
+                    }
+                    markerRef.current = window.L.marker([lat, lng]).addTo(map);
+                });
+                
+                mapInstanceRef.current = map;
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showModal]);
 
     if (loading) {
         return (
@@ -201,8 +283,8 @@ const AdminRoomTypesPage = () => {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-lg p-8 max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
                         <h2 className="text-2xl font-bold mb-6">
                             {editingRoomType ? 'Edit Room Type' : 'Add New Room Type'}
                         </h2>
@@ -255,6 +337,35 @@ const AdminRoomTypesPage = () => {
                                         onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
                                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Location Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.location}
+                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        placeholder="e.g., Calapan City, Puerto Galera"
+                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Pin Location on Map
+                                    </label>
+                                    <p className="text-sm text-gray-600 mb-3">
+                                        Click on the map to set the location coordinates
+                                    </p>
+                                    <div 
+                                        ref={mapRef}
+                                        className="h-96 w-full rounded-lg border border-gray-300"
+                                    ></div>
+                                    {formData.latitude && formData.longitude && (
+                                        <p className="mt-2 text-sm text-gray-600">
+                                            Current location: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">

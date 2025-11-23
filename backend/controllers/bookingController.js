@@ -3,6 +3,7 @@ const TourBooking = require('../models/TourBooking');
 const Room = require('../models/Room');
 const RoomType = require('../models/RoomType');
 const Tour = require('../models/Tour');
+const User = require('../models/User');
 const { Op } = require('sequelize');
 
 // @desc    Get logged-in user's room bookings
@@ -90,7 +91,21 @@ exports.createRoomBooking = async (req, res) => {
         
         const guest_id = req.user.id; // From our 'protect' middleware
 
-        // 1. Create the booking without room assignment
+        // Check if guest already has an active booking (pending or confirmed)
+        const existingBooking = await Booking.findOne({
+            where: {
+                guest_id: guest_id,
+                status: { [Op.in]: ['pending', 'confirmed'] }
+            }
+        });
+
+        if (existingBooking) {
+            return res.status(400).json({ 
+                message: 'You already have an active booking. Please wait until it is completed or cancelled before making a new reservation.' 
+            });
+        }
+
+        // 1. Create the booking without room assignment - status is 'pending' until front desk assigns room
         const booking = await Booking.create({
             guest_id: guest_id,
             room_type_id: room_type_id,
@@ -100,7 +115,7 @@ exports.createRoomBooking = async (req, res) => {
             check_in_time: check_in_time || '14:00:00',
             check_out_time: check_out_time || '12:00:00',
             total_price: total_price,
-            status: 'confirmed', // Payment was successful but room not assigned yet
+            status: 'pending', // Pending until front desk assigns room
             payment_status: 'paid',
             amount_paid: total_price,
             balance_due: 0
@@ -131,6 +146,20 @@ exports.createTourBooking = async (req, res) => {
 
         const guest_id = req.user.id; // From our 'protect' middleware
 
+        // Check if guest already has an active tour booking (pending or confirmed)
+        const existingTourBooking = await TourBooking.findOne({
+            where: {
+                guest_id: guest_id,
+                status: { [Op.in]: ['pending', 'confirmed'] }
+            }
+        });
+
+        if (existingTourBooking) {
+            return res.status(400).json({ 
+                message: 'You already have an active tour booking. Please wait until it is completed or cancelled before making a new reservation.' 
+            });
+        }
+
         // In a real app, you might check if the tour is available
         // For now, we'll just create the booking
         
@@ -140,7 +169,7 @@ exports.createTourBooking = async (req, res) => {
             booking_date: booking_date,
             number_of_pax: number_of_pax,
             total_price: total_price,
-            status: 'confirmed'
+            status: 'pending' // Pending until admin confirms
         });
 
         // 4. (Future): Save payment_id to an 'invoices' table
@@ -149,6 +178,43 @@ exports.createTourBooking = async (req, res) => {
 
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Get booking by ID
+// @route   GET /api/bookings/:id
+exports.getBookingById = async (req, res) => {
+    try {
+        const booking = await Booking.findByPk(req.params.id, {
+            include: [
+                {
+                    model: User,
+                    as: 'Guest',
+                    attributes: ['first_name', 'last_name', 'email', 'phone_number']
+                },
+                {
+                    model: RoomType,
+                    attributes: ['name', 'id']
+                },
+                {
+                    model: Room,
+                    required: false,
+                    include: {
+                        model: RoomType,
+                        attributes: ['name']
+                    }
+                }
+            ]
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        res.json(booking);
+    } catch (error) {
+        console.error('Get booking by ID error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

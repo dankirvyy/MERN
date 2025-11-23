@@ -43,4 +43,13 @@ const admin = (req, res, next) => {
     }
 };
 
-module.exports = { protect, admin };
+// Front Desk only middleware
+const frontDeskOnly = (req, res, next) => {
+    if (req.user && req.user.role === 'front_desk') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Not authorized, front desk access only' });
+    }
+};
+
+module.exports = { protect, admin, frontDeskOnly };

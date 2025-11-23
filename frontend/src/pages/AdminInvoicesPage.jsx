@@ -16,7 +16,7 @@ const AdminInvoicesPage = () => {
 
     const fetchInvoices = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -32,7 +32,7 @@ const AdminInvoicesPage = () => {
 
     const fetchStats = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -48,7 +48,7 @@ const AdminInvoicesPage = () => {
         if (!confirm('Mark this invoice as paid?')) return;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -68,7 +68,7 @@ const AdminInvoicesPage = () => {
 
     const handleDownloadPDF = async (id) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const response = await axios.get(`http://localhost:5001/api/admin/invoices/${id}/pdf`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'

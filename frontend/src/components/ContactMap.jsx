@@ -21,7 +21,7 @@ function ContactMap() {
 
     return (
         // Set the height just like in your PHP file (h-96)
-        <MapContainer center={position} zoom={14} scrollWheelZoom={false} className="h-96 w-full rounded-lg shadow-md">
+        <MapContainer center={position} zoom={14} scrollWheelZoom={false} className="h-96 w-full rounded-lg shadow-md" style={{ zIndex: 0 }}>
             <TileLayer
                 attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

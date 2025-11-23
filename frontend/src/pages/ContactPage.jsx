@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faPhone, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import { AuthContext } from '../context/AuthContext';
 
 // --- Import Leaflet's CSS ---
 import 'leaflet/dist/leaflet.css';
 import ContactMap from '../components/ContactMap.jsx'; // Import the map
 
 function ContactPage() {
+    const { user } = useContext(AuthContext);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
+
+    // Autofill name and email for logged-in users
+    useEffect(() => {
+        if (user) {
+            // Use user.name if available, otherwise construct from first_name and last_name
+            const fullName = user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            setName(fullName);
+            setEmail(user.email || '');
+        }
+    }, [user]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -50,7 +62,7 @@ function ContactPage() {
                             </p>
                         </div>
                         
-                        <div className="mt-6 h-96 w-full rounded-lg shadow-md overflow-hidden">
+                        <div className="mt-6 h-96 w-full rounded-lg shadow-md overflow-hidden" style={{ position: 'relative', zIndex: 0 }}>
                             {/* Render the map component here */}
                             <ContactMap />
                         </div>

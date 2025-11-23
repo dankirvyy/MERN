@@ -5,7 +5,7 @@ const getImageUrl = (filename) => {
     if (!filename) {
         return 'https://images.unsplash.com/photo-1523999955322-74afa39a5712?auto=format&fit=crop&w=800&q=60';
     }
-    return `http://localhost:5001/uploads/images/${filename}`;
+    return `http://localhost:5001/uploads/${filename}`;
 }
 
 function TourCard({ tour }) {

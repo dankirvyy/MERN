@@ -15,7 +15,7 @@ const AdminReportsPage = () => {
     const fetchReports = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` },
                 params: { start_date: startDate, end_date: endDate }

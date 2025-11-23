@@ -14,7 +14,7 @@ const AdminTourBookingsPage = () => {
 
     const fetchBookings = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -30,7 +30,7 @@ const AdminTourBookingsPage = () => {
 
     const handleStatusChange = async (bookingId, newStatus) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -45,6 +45,27 @@ const AdminTourBookingsPage = () => {
         } catch (error) {
             console.error('Error updating status:', error);
             alert('Error updating booking status');
+        }
+    };
+
+    const handleConfirmBooking = async (bookingId) => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const config = {
+                headers: { Authorization: `Bearer ${token}` }
+            };
+
+            await axios.patch(
+                `http://localhost:5001/api/admin/tour-bookings/${bookingId}/confirm`,
+                {},
+                config
+            );
+
+            fetchBookings();
+            alert('Tour booking confirmed successfully!');
+        } catch (error) {
+            console.error('Error confirming booking:', error);
+            alert(error.response?.data?.message || 'Error confirming booking');
         }
     };
 
@@ -144,17 +165,27 @@ const AdminTourBookingsPage = () => {
                                             </select>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {booking.status !== 'cancelled' && (
-                                                <button
-                                                    onClick={() => navigate(`/admin/tour-bookings/${booking.id}/manage-resources`)}
-                                                    className="text-orange-600 hover:text-orange-900 font-medium"
-                                                >
-                                                    Manage Resources
-                                                </button>
-                                            )}
-                                            {booking.status === 'cancelled' && (
-                                                <span className="text-gray-400 text-xs">Cancelled</span>
-                                            )}
+                                            <div className="flex flex-col gap-2">
+                                                {booking.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => handleConfirmBooking(booking.id)}
+                                                        className="text-green-600 hover:text-green-900 font-medium"
+                                                    >
+                                                        Confirm Booking
+                                                    </button>
+                                                )}
+                                                {booking.status !== 'cancelled' && (
+                                                    <button
+                                                        onClick={() => navigate(`/admin/tour-bookings/${booking.id}/manage-resources`)}
+                                                        className="text-orange-600 hover:text-orange-900 font-medium"
+                                                    >
+                                                        Manage Resources
+                                                    </button>
+                                                )}
+                                                {booking.status === 'cancelled' && (
+                                                    <span className="text-gray-400 text-xs">Cancelled</span>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

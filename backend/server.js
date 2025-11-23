@@ -5,6 +5,9 @@ const { sequelize, connectDB } = require('./config/db');
 const path = require('path'); // <-- 1. IMPORT THE 'path' MODULE
 const { autoCleanupExpiredBookings } = require('./utils/bookingUtils');
 
+// --- Set Timezone (Philippines) ---
+process.env.TZ = 'Asia/Manila';
+
 // --- Database Connection ---
 connectDB();
 sequelize.sync(); 
@@ -33,6 +36,7 @@ autoCleanupExpiredBookings(); // Run once on startup
 
 // --- API Routes ---
 app.use('/api/admin', require('./routes/adminRoutes')); // Admin routes FIRST
+app.use('/api/frontdesk', require('./routes/frontDeskRoutes')); // Front Desk routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tours', require('./routes/tours')); 
 app.use('/api/room-types', require('./routes/roomTypes'));

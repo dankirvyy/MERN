@@ -87,6 +87,7 @@ router.get('/rooms/available', adminController.getAvailableRoomsForAssignment);
 // Tour booking routes - specific routes FIRST
 router.get('/tour-bookings/:id/resources', adminReportsController.getTourBookingResources);
 router.post('/tour-bookings/:id/resources', adminReportsController.assignResource);
+router.patch('/tour-bookings/:id/confirm', adminController.confirmTourBooking);
 router.get('/tour-bookings/:id', (req, res, next) => {
     console.log('Route matched: GET /api/admin/tour-bookings/:id with id =', req.params.id);
     next();

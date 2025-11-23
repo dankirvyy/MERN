@@ -38,17 +38,21 @@ const upload = multer({
 
 exports.upload = upload;
 
-// @desc    Fetch all room types (WITH SEARCH & SORT)
+// @desc    Fetch all room types (WITH SEARCH, LOCATION FILTER & SORT)
 // @route   GET /api/room-types
 exports.getAllRoomTypes = async (req, res) => {
     try {
-        const { search, sort } = req.query;
+        const { search, sort, location } = req.query;
 
         let whereOptions = {};
         let orderOptions = [];
 
         if (search) {
             whereOptions.name = { [Op.like]: `%${search}%` };
+        }
+
+        if (location) {
+            whereOptions.location = location;
         }
 
         switch (sort) {
@@ -116,13 +120,16 @@ exports.getAvailableRooms = async (req, res) => {
 // @route   POST /api/room-types
 exports.createRoomType = async (req, res) => {
     try {
-        const { name, description, base_price, capacity } = req.body;
+        const { name, description, base_price, capacity, location, latitude, longitude } = req.body;
         
         const roomTypeData = {
             name,
             description,
             base_price,
-            capacity
+            capacity,
+            location: location || null,
+            latitude: latitude || null,
+            longitude: longitude || null
         };
 
         if (req.file) {
@@ -141,7 +148,7 @@ exports.createRoomType = async (req, res) => {
 // @route   PUT /api/room-types/:id
 exports.updateRoomType = async (req, res) => {
     try {
-        const { name, description, base_price, capacity } = req.body;
+        const { name, description, base_price, capacity, location, latitude, longitude } = req.body;
         const roomType = await RoomType.findByPk(req.params.id);
 
         if (roomType) {
@@ -157,6 +164,9 @@ exports.updateRoomType = async (req, res) => {
             roomType.description = description || roomType.description;
             roomType.base_price = base_price || roomType.base_price;
             roomType.capacity = capacity || roomType.capacity;
+            roomType.location = location !== undefined ? location : roomType.location;
+            roomType.latitude = latitude !== undefined ? latitude : roomType.latitude;
+            roomType.longitude = longitude !== undefined ? longitude : roomType.longitude;
             
             if (req.file) {
                 roomType.image_filename = req.file.filename;

@@ -32,15 +32,18 @@ import AdminInvoiceDetailPage from './pages/AdminInvoiceDetailPage.jsx';
 import AdminManageTourResourcesPage from './pages/AdminManageTourResourcesPage.jsx';
 import AdminResourceCalendarPage from './pages/AdminResourceCalendarPage.jsx';
 import AdminFrontDeskPage from './pages/AdminFrontDeskPage.jsx';
+import FrontDeskDashboardPage from './pages/FrontDeskDashboardPage.jsx';
+import RoomAssignmentPage from './pages/RoomAssignmentPage.jsx';
 
 function App() {
     const location = useLocation();
     const isAdminRoute = location.pathname.startsWith('/admin');
+    const isFrontDeskRoute = location.pathname.startsWith('/frontdesk');
     const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
 
     return (
         <>
-            {!isAdminRoute && !isAuthRoute && <Navbar />}
+            {!isAdminRoute && !isFrontDeskRoute && !isAuthRoute && <Navbar />}
             <main> 
                 <Routes>
                     <Route path="/" element={<HomePage />} />
@@ -78,10 +81,14 @@ function App() {
                         <Route path="/admin/reports" element={<AdminReportsPage />} />
                         <Route path="/admin/invoices" element={<AdminInvoicesPage />} />
                         <Route path="/admin/invoices/:id" element={<AdminInvoiceDetailPage />} />
+                        
+                        {/* Front Desk Routes */}
+                        <Route path="/frontdesk/dashboard" element={<FrontDeskDashboardPage />} />
+                        <Route path="/frontdesk/assign/:bookingId" element={<RoomAssignmentPage />} />
                     </Route>
                 </Routes>
             </main>
-            {!isAdminRoute && !isAuthRoute && <Footer />}
+            {!isAdminRoute && !isFrontDeskRoute && !isAuthRoute && <Footer />}
         </>
     );
 }

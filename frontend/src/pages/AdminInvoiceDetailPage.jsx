@@ -11,7 +11,7 @@ const AdminInvoiceDetailPage = () => {
 
     const fetchInvoice = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -32,7 +32,7 @@ const AdminInvoiceDetailPage = () => {
 
     const handleDownloadPDF = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const response = await axios.get(`http://localhost:5001/api/admin/invoices/${id}/pdf`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'

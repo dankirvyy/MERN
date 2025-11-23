@@ -11,40 +11,73 @@ const User = require('../models/User');
 const autoCleanupExpiredBookings = async () => {
     try {
         const now = new Date();
+        console.log(`Auto-cleanup running at: ${now.toISOString()}`);
 
-        // Update expired room bookings to completed
+        // Update expired room bookings to completed (considering both date and time)
         const expiredBookings = await Booking.findAll({
             where: {
                 status: 'confirmed',
-                [Op.and]: [
+                [Op.or]: [
                     {
                         check_out_date: {
                             [Op.lt]: now.toISOString().split('T')[0]
                         }
+                    },
+                    {
+                        [Op.and]: [
+                            {
+                                check_out_date: {
+                                    [Op.eq]: now.toISOString().split('T')[0]
+                                }
+                            },
+                            {
+                                check_out_time: {
+                                    [Op.lte]: now.toTimeString().split(' ')[0]
+                                }
+                            }
+                        ]
                     }
                 ]
             }
         });
+        
+        console.log(`Found ${expiredBookings.length} expired bookings`);
 
         // Get affected guest IDs
         const affectedGuestIds = [...new Set(expiredBookings.map(b => b.guest_id).filter(Boolean))];
 
         // Update bookings to completed
-        await Booking.update(
+        const updated = await Booking.update(
             { status: 'completed' },
             {
                 where: {
                     status: 'confirmed',
-                    [Op.and]: [
+                    [Op.or]: [
                         {
                             check_out_date: {
                                 [Op.lt]: now.toISOString().split('T')[0]
                             }
+                        },
+                        {
+                            [Op.and]: [
+                                {
+                                    check_out_date: {
+                                        [Op.eq]: now.toISOString().split('T')[0]
+                                    }
+                                },
+                                {
+                                    check_out_time: {
+                                        [Op.lte]: now.toTimeString().split(' ')[0]
+                                    }
+                                }
+                            ]
                         }
                     ]
                 }
             }
         );
+        
+        console.log(`Auto-completed ${updated[0]} booking(s)`);
 
         // Free up rooms that no longer have active bookings
         const occupiedRooms = await Room.findAll({

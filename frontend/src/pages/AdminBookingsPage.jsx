@@ -12,7 +12,7 @@ const AdminBookingsPage = () => {
 
     const fetchBookings = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -28,7 +28,7 @@ const AdminBookingsPage = () => {
 
     const handleStatusChange = async (bookingId, newStatus) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };

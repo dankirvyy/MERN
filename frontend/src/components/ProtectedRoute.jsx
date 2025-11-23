@@ -1,9 +1,10 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 const ProtectedRoute = () => {
     const { user, loading } = useAuth();
+    const location = useLocation();
 
     // Show loading state while checking authentication
     if (loading) {
@@ -17,9 +18,25 @@ const ProtectedRoute = () => {
         );
     }
 
-    // If user is logged in, show the child route (e.g., MyProfilePage)
-    // Otherwise, redirect to login
-    return user ? <Outlet /> : <Navigate to="/login" replace />;
+    // If not logged in, redirect to login
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Role-based access control
+    const path = location.pathname;
+    
+    // Admin routes - only for admin role
+    if (path.startsWith('/admin') && user.role !== 'admin') {
+        return <Navigate to="/" replace />;
+    }
+    
+    // Front Desk routes - only for front_desk role
+    if (path.startsWith('/frontdesk') && user.role !== 'front_desk') {
+        return <Navigate to="/" replace />;
+    }
+
+    return <Outlet />;
 };
 
 export default ProtectedRoute;

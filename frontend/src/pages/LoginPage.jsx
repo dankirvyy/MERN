@@ -37,6 +37,9 @@ function LoginPage() {
             if (response.data.role === 'admin') {
                 console.log('Redirecting to admin dashboard'); // Debug
                 navigate('/admin/dashboard');
+            } else if (response.data.role === 'front_desk') {
+                console.log('Redirecting to front desk dashboard'); // Debug
+                navigate('/frontdesk/dashboard');
             } else {
                 console.log('Redirecting to home'); // Debug
                 navigate('/');

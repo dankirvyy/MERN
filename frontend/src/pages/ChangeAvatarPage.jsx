@@ -40,7 +40,7 @@ function ChangeAvatarPage() {
 
         try {
             // 2. Get token
-            const token = JSON.parse(localStorage.getItem('user'))?.token;
+            const token = JSON.parse(sessionStorage.getItem('user'))?.token;
             
             // 3. Set config for 'multipart/form-data'
             const config = {

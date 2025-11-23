@@ -17,7 +17,7 @@ const AdminManageTourResourcesPage = () => {
 
     const fetchBookingDetails = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             if (!token) {
                 console.error('No auth token found');
                 setError('Authentication required. Please log in.');
@@ -63,7 +63,7 @@ const AdminManageTourResourcesPage = () => {
 
     const fetchAssignedResources = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -92,7 +92,7 @@ const AdminManageTourResourcesPage = () => {
 
     const fetchAvailableResources = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -128,7 +128,7 @@ const AdminManageTourResourcesPage = () => {
         }
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -156,7 +156,7 @@ const AdminManageTourResourcesPage = () => {
         if (!confirm('Are you sure you want to un-assign this resource?')) return;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };

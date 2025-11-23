@@ -108,7 +108,7 @@ function ConfirmBookingPage() {
         setError(null);
         
         try {
-            const token = JSON.parse(localStorage.getItem('user'))?.token;
+            const token = JSON.parse(sessionStorage.getItem('user'))?.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
             const body = {
                 room_type_id: booking.bookingData.room_type_id,
@@ -132,8 +132,11 @@ function ConfirmBookingPage() {
         } catch (err) {
             console.error('Booking error:', err);
             console.error('Error response:', err.response?.data);
-            setError(err.response?.data?.message || 'A critical error occurred. Please contact support.');
+            const errorMessage = err.response?.data?.message || 'A critical error occurred. Please contact support.';
+            setError(errorMessage);
             setIsSubmitting(false);
+            // Close modal if open
+            if (isModalOpen) setIsModalOpen(false);
         }
     };
     

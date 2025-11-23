@@ -14,6 +14,18 @@ const formatPrice = (price) => {
 // Helper to format text
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// Helper to get status badge colors
+const getStatusBadge = (status) => {
+    const badges = {
+        pending: 'bg-yellow-100 text-yellow-800',
+        confirmed: 'bg-blue-100 text-blue-800',
+        checked_in: 'bg-green-100 text-green-800',
+        completed: 'bg-gray-100 text-gray-800',
+        cancelled: 'bg-red-100 text-red-800'
+    };
+    return badges[status] || 'bg-gray-100 text-gray-800';
+};
+
 function MyProfilePage() {
     const { user } = useAuth();
     const [roomBookings, setRoomBookings] = useState([]);
@@ -26,7 +38,7 @@ function MyProfilePage() {
             setLoading(true);
             try {
                 // Get token from localStorage
-                const token = JSON.parse(localStorage.getItem('user'))?.token;
+                const token = JSON.parse(sessionStorage.getItem('user'))?.token;
 
                 if (!token) {
                     setError('Not authorized.');
@@ -147,7 +159,11 @@ function MyProfilePage() {
                                                 <tr key={b.id}>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{`${b.room_number} (${b.room_type_name})`}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.check_in_date} to {b.check_out_date}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{capitalize(b.status)}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(b.status)}`}>
+                                                            {capitalize(b.status)}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(b.total_price)}</td>
                                                 </tr>
                                             ))}
@@ -182,7 +198,11 @@ function MyProfilePage() {
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{b.tour_name}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.booking_date}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.number_of_pax}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{capitalize(b.status)}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(b.status)}`}>
+                                                            {capitalize(b.status)}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(b.total_price)}</td>
                                                 </tr>
                                             ))}

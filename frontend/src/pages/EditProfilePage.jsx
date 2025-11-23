@@ -35,7 +35,7 @@ function EditProfilePage() {
 
         try {
             // Get token from localStorage
-            const token = JSON.parse(localStorage.getItem('user'))?.token;
+            const token = JSON.parse(sessionStorage.getItem('user'))?.token;
             
             const config = {
                 headers: {

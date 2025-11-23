@@ -15,7 +15,7 @@ const AdminGuestsPage = () => {
 
     const fetchGuests = async (searchTerm = '') => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -41,7 +41,7 @@ const AdminGuestsPage = () => {
         if (!confirm(`Are you sure you want to delete ${name}?`)) return;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`

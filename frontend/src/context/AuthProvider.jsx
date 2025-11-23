@@ -1,34 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { AuthContext } from './AuthContext.jsx'; // Import the context from the file above
+import { AuthContext } from './AuthContext.jsx';
+import { getUser, setUser as saveUser, removeUser, setToken, removeToken } from '../utils/storage';
 
-// This is the Provider component that we moved from AuthContext.jsx
+// This is the Provider component - uses sessionStorage for tab-specific sessions
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    // Use sessionStorage for tab-specific sessions
+    const storedUser = getUser();
     if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-      }
+      setUser(storedUser);
     }
     setLoading(false);
   }, []);
 
   const login = (userData) => {
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', userData.token);
+    // Use sessionStorage so each tab has its own session
+    saveUser(userData);
+    setToken(userData.token);
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    // Only affects the current tab
+    removeUser();
+    removeToken();
     setUser(null);
   };
 

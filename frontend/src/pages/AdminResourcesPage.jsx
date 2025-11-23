@@ -22,7 +22,7 @@ const AdminResourcesPage = () => {
 
     const fetchResources = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -40,7 +40,7 @@ const AdminResourcesPage = () => {
         e.preventDefault();
         
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -77,7 +77,7 @@ const AdminResourcesPage = () => {
         if (!confirm(`Are you sure you want to delete ${name}?`)) return;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };

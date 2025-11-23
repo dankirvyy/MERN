@@ -15,7 +15,7 @@ function AdminFrontDeskPage() {
 
     const fetchUnassignedBookings = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -31,7 +31,7 @@ function AdminFrontDeskPage() {
     const handleAssignRoom = async (booking) => {
         setSelectedBooking(booking);
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -55,7 +55,7 @@ function AdminFrontDeskPage() {
         }
 
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };

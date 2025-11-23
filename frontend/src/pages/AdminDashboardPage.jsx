@@ -36,8 +36,8 @@ const AdminDashboardPage = () => {
     const fetchDashboardData = useCallback(async () => {
         try {
             console.log('Fetching dashboard data...');
-            const token = localStorage.getItem('token');
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const token = sessionStorage.getItem('token');
+            const user = JSON.parse(sessionStorage.getItem('user') || '{}');
             console.log('User from localStorage:', user);
 
             // Check if user is admin

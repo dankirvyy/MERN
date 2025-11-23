@@ -1,21 +1,22 @@
 const express = require('express');
 const router = express.Router();
 
-// --- THIS IS THE FIX ---
-// You were missing 'createRoomBooking' from this list
 const { 
     getMyRoomBookings, 
     getMyTourBookings,
     createRoomBooking,
-    createTourBooking
+    createTourBooking,
+    getBookingById
 } = require('../controllers/bookingController');
-// --- END FIX ---
 
 const { protect } = require('../middleware/authMiddleware');
 
 // Get My Bookings
 router.get('/my-rooms', protect, getMyRoomBookings);
 router.get('/my-tours', protect, getMyTourBookings);
+
+// Get specific booking by ID
+router.get('/:id', protect, getBookingById);
 
 // Create New Booking
 router.post('/room', protect, createRoomBooking);

@@ -12,7 +12,7 @@ const AdminCRMPage = () => {
 
     const fetchCRMData = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -28,7 +28,7 @@ const AdminCRMPage = () => {
 
     const handleExportMarketing = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const config = {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
