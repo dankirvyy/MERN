@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('./config/passport');
 const { sequelize, connectDB } = require('./config/db');
 const path = require('path'); // <-- 1. IMPORT THE 'path' MODULE
 const { autoCleanupExpiredBookings } = require('./utils/bookingUtils');
@@ -16,8 +18,27 @@ sequelize.sync();
 const app = express();
 
 // --- Middlewares ---
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
+
+// Session configuration for passport
+app.use(session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production'
+    }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Request logging middleware
 app.use((req, res, next) => {

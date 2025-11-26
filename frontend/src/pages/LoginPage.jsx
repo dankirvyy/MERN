@@ -169,9 +169,9 @@ function LoginPage() {
                 </div>
 
                 <div>
-                    {/* This <a> tag points to your eventual backend Google route. We haven't built this yet. */}
+                    {/* Google OAuth Login */}
                     <a 
-                        href="http://localhost:5001/api/auth/google-login" // This should be the backend API route
+                        href="http://localhost:5001/api/auth/google"
                         className="flex w-full items-center justify-center rounded-md bg-white py-2.5 px-4 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                     >
                         {/* Google SVG from your HTML */}

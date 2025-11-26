@@ -10,6 +10,7 @@ const Invoice = require('../models/Invoice');
 const InvoiceItem = require('../models/InvoiceItem');
 const Resource = require('../models/Resource');
 const ResourceSchedule = require('../models/ResourceSchedule');
+const { sendRoomAssignmentNotification, sendTourConfirmationEmail } = require('../utils/emailService');
 
 // ===================================
 // DASHBOARD
@@ -634,6 +635,27 @@ exports.confirmTourBooking = async (req, res) => {
 
         await booking.update({ status: 'confirmed' });
 
+        // Send tour confirmation email
+        try {
+            const tourDetails = {
+                'Booking ID': booking.id,
+                'Tour Name': booking.Tour.name,
+                'Booking Date': new Date(booking.booking_date).toLocaleDateString(),
+                'Number of Guests': booking.number_of_pax,
+                'Total Amount': `₱${booking.total_price.toLocaleString()}`,
+                'Status': 'Confirmed'
+            };
+
+            await sendTourConfirmationEmail(
+                booking.Guest.email,
+                `${booking.Guest.first_name} ${booking.Guest.last_name}`,
+                tourDetails
+            );
+        } catch (emailError) {
+            console.error('Failed to send tour confirmation email:', emailError);
+            // Don't fail the confirmation if email fails
+        }
+
         res.json({
             message: 'Tour booking confirmed successfully',
             booking
@@ -656,7 +678,7 @@ exports.getUnassignedBookings = async (req, res) => {
         const bookings = await Booking.findAll({
             where: {
                 room_id: null,
-                status: 'confirmed'
+                status: 'pending'
             },
             include: [
                 {
@@ -753,11 +775,25 @@ exports.getAvailableRoomsForAssignment = async (req, res) => {
 // @route   PUT /api/admin/bookings/:id/assign-room
 // @access  Private/Admin
 exports.assignRoomToBooking = async (req, res) => {
+    console.log('🔵 assignRoomToBooking called with booking ID:', req.params.id, 'room ID:', req.body.room_id);
     try {
         const { id } = req.params;
         const { room_id } = req.body;
 
-        const booking = await Booking.findByPk(id);
+        const booking = await Booking.findByPk(id, {
+            include: [
+                {
+                    model: User,
+                    as: 'Guest',
+                    attributes: ['first_name', 'last_name', 'email']
+                },
+                {
+                    model: RoomType,
+                    attributes: ['name']
+                }
+            ]
+        });
+        
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
@@ -768,9 +804,40 @@ exports.assignRoomToBooking = async (req, res) => {
             return res.status(404).json({ message: 'Room not found' });
         }
 
-        // Update booking with room assignment
+        // Update booking with room assignment and confirm it
         booking.room_id = room_id;
+        booking.status = 'confirmed'; // Confirm booking after room assignment
         await booking.save();
+
+        // Send room assignment notification email
+        console.log('📧 Attempting to send room assignment email to:', booking.Guest.email);
+        console.log('Guest name:', `${booking.Guest.first_name} ${booking.Guest.last_name}`);
+        console.log('Room Type:', booking.RoomType.name);
+        console.log('Room Number:', room.room_number);
+        
+        try {
+            const assignmentDetails = {
+                'Booking ID': booking.id,
+                'Room Number': room.room_number,
+                'Room Type': booking.RoomType.name,
+                'Check-in Date': new Date(booking.check_in_date).toLocaleDateString(),
+                'Check-out Date': new Date(booking.check_out_date).toLocaleDateString(),
+                'Check-in Time': booking.check_in_time || '2:00 PM',
+                'Check-out Time': booking.check_out_time || '12:00 PM'
+            };
+
+            console.log('Calling sendRoomAssignmentNotification...');
+            const result = await sendRoomAssignmentNotification(
+                booking.Guest.email,
+                `${booking.Guest.first_name} ${booking.Guest.last_name}`,
+                assignmentDetails
+            );
+            console.log('Email send result:', result);
+        } catch (emailError) {
+            console.error('❌ Failed to send room assignment email:', emailError);
+            console.error('Error stack:', emailError.stack);
+            // Don't fail the assignment if email fails
+        }
 
         // Optionally update room status
         // room.status = 'occupied';

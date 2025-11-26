@@ -3,6 +3,7 @@ const Room = require('../models/Room');
 const RoomType = require('../models/RoomType');
 const User = require('../models/User');
 const { Op } = require('sequelize');
+const { sendRoomAssignmentNotification } = require('../utils/emailService');
 
 // @desc    Get front desk dashboard data
 // @route   GET /api/frontdesk/dashboard
@@ -186,6 +187,31 @@ exports.assignRoom = async (req, res) => {
                 }
             ]
         });
+
+        // Send room assignment notification email
+        try {
+            console.log('📧 Attempting to send room assignment email to:', updatedBooking.Guest.email);
+            
+            const assignmentDetails = {
+                'Booking ID': updatedBooking.id,
+                'Room Number': updatedBooking.Room.room_number,
+                'Room Type': updatedBooking.Room.RoomType.name,
+                'Check-in Date': new Date(updatedBooking.check_in_date).toLocaleDateString(),
+                'Check-out Date': new Date(updatedBooking.check_out_date).toLocaleDateString(),
+                'Check-in Time': updatedBooking.check_in_time || '2:00 PM',
+                'Check-out Time': updatedBooking.check_out_time || '12:00 PM'
+            };
+
+            await sendRoomAssignmentNotification(
+                updatedBooking.Guest.email,
+                `${updatedBooking.Guest.first_name} ${updatedBooking.Guest.last_name}`,
+                assignmentDetails
+            );
+            console.log('✅ Room assignment email sent successfully!');
+        } catch (emailError) {
+            console.error('❌ Failed to send room assignment email:', emailError);
+            // Don't fail the assignment if email fails
+        }
 
         res.json({
             message: 'Room assigned successfully',

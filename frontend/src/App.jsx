@@ -3,7 +3,8 @@ import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';   
 import HomePage from './pages/HomePage.jsx'; 
 import LoginPage from './pages/LoginPage.jsx'; 
-import SignupPage from './pages/SignupPage.jsx'; 
+import SignupPage from './pages/SignupPage.jsx';
+import GoogleAuthCallback from './pages/GoogleAuthCallback.jsx';
 import ToursPage from './pages/ToursPage.jsx';  
 import RoomsPage from './pages/RoomsPage.jsx';
 import ContactPage from './pages/ContactPage.jsx';
@@ -49,6 +50,7 @@ function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />
+                    <Route path="/auth/google/success" element={<GoogleAuthCallback />} />
                     <Route path="/tours" element={<ToursPage />} />
                     <Route path="/rooms" element={<RoomsPage />} />
                     <Route path="/contact" element={<ContactPage />} />
