@@ -33,6 +33,56 @@ function MyProfilePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const handleCancelRoomBooking = async (bookingId) => {
+        if (!window.confirm('Are you sure you want to cancel this booking?')) {
+            return;
+        }
+
+        try {
+            const token = JSON.parse(sessionStorage.getItem('user'))?.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` }
+            };
+
+            await axios.patch(`http://localhost:5001/api/bookings/room/${bookingId}/cancel`, {}, config);
+            
+            // Refresh bookings
+            setRoomBookings(prev => prev.map(b => 
+                b.id === bookingId ? { ...b, status: 'cancelled' } : b
+            ));
+            
+            alert('Booking cancelled successfully');
+        } catch (err) {
+            console.error('Cancel booking error:', err);
+            alert('Failed to cancel booking. Please try again.');
+        }
+    };
+
+    const handleCancelTourBooking = async (bookingId) => {
+        if (!window.confirm('Are you sure you want to cancel this booking?')) {
+            return;
+        }
+
+        try {
+            const token = JSON.parse(sessionStorage.getItem('user'))?.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` }
+            };
+
+            await axios.patch(`http://localhost:5001/api/bookings/tour/${bookingId}/cancel`, {}, config);
+            
+            // Refresh bookings
+            setTourBookings(prev => prev.map(b => 
+                b.id === bookingId ? { ...b, status: 'cancelled' } : b
+            ));
+            
+            alert('Booking cancelled successfully');
+        } catch (err) {
+            console.error('Cancel booking error:', err);
+            alert('Failed to cancel booking. Please try again.');
+        }
+    };
+
     useEffect(() => {
         const fetchBookings = async () => {
             setLoading(true);
@@ -152,12 +202,13 @@ function MyProfilePage() {
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in / Check-out</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {roomBookings.map(b => (
                                                 <tr key={b.id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{`${b.room_number} (${b.room_type_name})`}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{b.room_number ? `${b.room_number} (${b.room_type_name})` : `Not Assigned Yet (${b.room_type_name})`}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.check_in_date} to {b.check_out_date}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(b.status)}`}>
@@ -165,6 +216,16 @@ function MyProfilePage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(b.total_price)}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        {b.status === 'pending' && (
+                                                            <button
+                                                                onClick={() => handleCancelRoomBooking(b.id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -190,6 +251,7 @@ function MyProfilePage() {
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -204,6 +266,16 @@ function MyProfilePage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(b.total_price)}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        {b.status === 'pending' && (
+                                                            <button
+                                                                onClick={() => handleCancelTourBooking(b.id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

@@ -17,6 +17,8 @@ import ConfirmBookingPage from './pages/ConfirmBookingPage.jsx';
 import BookTourPage from './pages/BookTourPage.jsx'; 
 import ConfirmTourBookingPage from './pages/ConfirmTourBookingPage.jsx';
 import TourDetailPage from './pages/TourDetailPage.jsx';
+import PaymentSuccessPage from './pages/PaymentSuccessPage.jsx';
+import PaymentFailedPage from './pages/PaymentFailedPage.jsx';
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import AdminGuestsPage from './pages/AdminGuestsPage.jsx';
 import AdminGuestDetailPage from './pages/AdminGuestDetailPage.jsx';
@@ -65,6 +67,12 @@ function App() {
                         <Route path="/booking/confirm" element={<ConfirmBookingPage />} />
                         <Route path="/book/tour/:tourId" element={<BookTourPage />} />
                         <Route path="/booking/confirm-tour" element={<ConfirmTourBookingPage />} />
+                        
+                        {/* Payment Success/Failure Routes */}
+                        <Route path="/payment/success/room" element={<PaymentSuccessPage type="room" />} />
+                        <Route path="/payment/success/tour" element={<PaymentSuccessPage type="tour" />} />
+                        <Route path="/payment/failed/room" element={<PaymentFailedPage type="room" />} />
+                        <Route path="/payment/failed/tour" element={<PaymentFailedPage type="tour" />} />
                         
                         {/* Admin Routes */}
                         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />

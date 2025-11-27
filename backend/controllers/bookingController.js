@@ -224,7 +224,10 @@ exports.createTourBooking = async (req, res) => {
             booking_date: booking_date,
             number_of_pax: number_of_pax,
             total_price: total_price,
-            status: 'pending' // Pending until admin confirms
+            status: 'pending', // Pending until admin confirms
+            payment_status: 'paid',
+            amount_paid: total_price,
+            balance_due: 0
         });
 
         // 4. Send tour booking confirmation email
@@ -329,6 +332,66 @@ exports.getBookingById = async (req, res) => {
         res.json(booking);
     } catch (error) {
         console.error('Get booking by ID error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Cancel a room booking
+// @route   PATCH /api/bookings/room/:id/cancel
+exports.cancelRoomBooking = async (req, res) => {
+    try {
+        const booking = await Booking.findOne({
+            where: { 
+                id: req.params.id,
+                guest_id: req.user.id // Ensure user can only cancel their own bookings
+            }
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Only allow cancellation of pending bookings
+        if (booking.status !== 'pending') {
+            return res.status(400).json({ message: 'Only pending bookings can be cancelled' });
+        }
+
+        booking.status = 'cancelled';
+        await booking.save();
+
+        res.json({ message: 'Booking cancelled successfully', booking });
+    } catch (error) {
+        console.error('Cancel room booking error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Cancel a tour booking
+// @route   PATCH /api/bookings/tour/:id/cancel
+exports.cancelTourBooking = async (req, res) => {
+    try {
+        const booking = await TourBooking.findOne({
+            where: { 
+                id: req.params.id,
+                guest_id: req.user.id // Ensure user can only cancel their own bookings
+            }
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Only allow cancellation of pending bookings
+        if (booking.status !== 'pending') {
+            return res.status(400).json({ message: 'Only pending bookings can be cancelled' });
+        }
+
+        booking.status = 'cancelled';
+        await booking.save();
+
+        res.json({ message: 'Booking cancelled successfully', booking });
+    } catch (error) {
+        console.error('Cancel tour booking error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

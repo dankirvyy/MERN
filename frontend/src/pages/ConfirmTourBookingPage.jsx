@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 // REMOVED PayPalScriptProvider and PayPalButtons
@@ -91,8 +91,77 @@ function ConfirmTourBookingPage() {
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const paypalButtonRef = useRef(null);
+    const [paypalLoaded, setPaypalLoaded] = useState(false);
 
-    // 3. REMOVED PAYPAL_CLIENT_ID, priceInUSD, createOrder, and onApprove
+    // Load PayPal SDK
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID || 'AX-pdO9zfNub7FK5Bh74ijfassLBoUvHIMuWCrNmDJG2M33Lu-s1PF27A2OGyAJ9M_-wdbxQiDFfbPK7'}&currency=USD`;
+        script.async = true;
+        script.onload = () => setPaypalLoaded(true);
+        document.body.appendChild(script);
+
+        return () => {
+            document.body.removeChild(script);
+        };
+    }, []);
+
+    // Initialize PayPal buttons when payment method is selected and SDK is loaded
+    useEffect(() => {
+        if (paymentMethod === 'paypal' && paypalLoaded && paypalButtonRef.current && window.paypal) {
+            // Clear existing buttons
+            paypalButtonRef.current.innerHTML = '';
+
+            const usdAmount = (booking.bookingData.total_price / 55).toFixed(2);
+
+            window.paypal.Buttons({
+                createOrder: (data, actions) => {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: usdAmount
+                            }
+                        }]
+                    });
+                },
+                onApprove: async (data, actions) => {
+                    const details = await actions.order.capture();
+                    
+                    // Store booking data and payment info, then create booking directly
+                    const token = sessionStorage.getItem('token');
+                    try {
+                        const verifyResponse = await axios.post('http://localhost:5001/api/payment/paypal/verify/tour', {
+                            order_id: details.id,
+                            amount: booking.bookingData.total_price
+                        }, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+
+                        if (verifyResponse.data.success) {
+                            // Create booking directly (don't call finalizeBooking to avoid duplicate)
+                            await axios.post('http://localhost:5001/api/bookings/tour', {
+                                ...booking.bookingData,
+                                payment_method: 'paypal',
+                                payment_id: details.id
+                            }, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            navigate('/my-profile');
+                        }
+                    } catch (err) {
+                        setError('PayPal payment verification failed');
+                        setIsSubmitting(false);
+                    }
+                },
+                onError: (err) => {
+                    console.error('PayPal error:', err);
+                    setError('PayPal payment failed. Please try again.');
+                    setIsSubmitting(false);
+                }
+            }).render(paypalButtonRef.current);
+        }
+    }, [paymentMethod, paypalLoaded, booking]);
 
     if (!booking) {
         return (
@@ -132,16 +201,53 @@ function ConfirmTourBookingPage() {
         }
     };
     
-    // 4. RENAMED handleGcashSubmit to handlePaymentSubmit
-    const handlePaymentSubmit = (e) => {
+    // 4. Handle real payment submission
+    const handlePaymentSubmit = async (e) => {
         e.preventDefault();
-        setIsModalOpen(true);
+        setIsSubmitting(true);
+        setError('');
+
+        const token = sessionStorage.getItem('token');
+        const method = paymentMethod;
+
+        try {
+            if (method === 'gcash') {
+                // Create GCash payment source
+                const { data } = await axios.post('http://localhost:5001/api/payment/gcash/create-source/tour', {
+                    amount: booking.bookingData.total_price,
+                    booking_data: booking.bookingData,
+                    guest_data: booking.guestData
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                // Store both booking data and source_id in localStorage before redirect
+                console.log('Storing tour booking data:', booking);
+                console.log('Storing source_id:', data.source_id);
+                localStorage.setItem('pending_tour_booking', JSON.stringify(booking));
+                localStorage.setItem('paymongo_source_id', data.source_id);
+                
+                // Verify storage
+                console.log('Verified storage - booking:', localStorage.getItem('pending_tour_booking'));
+                console.log('Verified storage - source_id:', localStorage.getItem('paymongo_source_id'));
+
+                // Redirect to GCash checkout
+                window.location.href = data.checkout_url;
+            } else if (method === 'paypal') {
+                // PayPal SDK will handle the payment flow through the button
+                setIsSubmitting(false);
+            }
+        } catch (err) {
+            console.error('Payment error:', err);
+            setError(err.response?.data?.message || 'Payment failed. Please try again.');
+            setIsSubmitting(false);
+        }
     };
     
     const onModalConfirm = () => {
         finalizeBooking({
             method: paymentMethod,
-            id: `${paymentMethod}_${new Date().getTime()}` // Fake payment ID
+            id: `${paymentMethod}_${new Date().getTime()}` // Fake payment ID for now
         });
     };
 
@@ -156,6 +262,17 @@ function ConfirmTourBookingPage() {
                     </div>
                     
                     <div className="mt-10 bg-white shadow-lg rounded-lg overflow-hidden">
+                        {/* Tour Image */}
+                        {booking.tourData.image_filename && (
+                            <div className="w-full h-64 overflow-hidden">
+                                <img 
+                                    src={`http://localhost:5001/uploads/${booking.tourData.image_filename}`}
+                                    alt={booking.tourData.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+                        
                         <div className="p-6 md:p-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 
@@ -198,14 +315,7 @@ function ConfirmTourBookingPage() {
                                                 <img className="h-6" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZP_xjIqcvTS8MoWqso_WkLX3bG6zXGMJdDg&s" alt="GCash Logo" />
                                             </span>
                                         </label>
-                                        {/* PayMaya Radio */}
-                                        <label className="cursor-pointer">
-                                            <input type="radio" name="payment_method_choice" value="paymaya" onChange={(e) => setPaymentMethod(e.target.value)} className="payment-method-input peer hidden" />
-                                            <span className="flex h-12 w-24 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium transition-all peer-checked:border-orange-600 peer-checked:ring-2 peer-checked:ring-orange-500">
-                                                <FontAwesomeIcon icon={faCreditCard} className="h-6 text-blue-600" />
-                                            </span>
-                                        </label>
-                                        {/* PayPal Radio (NEW) */}
+                                        {/* PayPal Radio */}
                                         <label className="cursor-pointer">
                                             <input type="radio" name="payment_method_choice" value="paypal" onChange={(e) => setPaymentMethod(e.target.value)} className="payment-method-input peer hidden" />
                                             <span className="flex h-12 w-24 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium transition-all peer-checked:border-orange-600 peer-checked:ring-2 peer-checked:ring-orange-500">
@@ -215,19 +325,20 @@ function ConfirmTourBookingPage() {
                                     </div>
                                 </div>
                                 
-                                {/* REMOVED PayPalButtons div */}
+                                {/* PayPal Button Container */}
+                                <div ref={paypalButtonRef} className={`mb-4 ${paymentMethod === 'paypal' ? 'block' : 'hidden'}`}></div>
                                 
                                 <div className="flex justify-end gap-x-4">
                                     <Link to={`/book/tour/${booking.tourData.id}`} className="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Go Back & Edit</Link>
                                     
-                                    {/* UPDATED Pay Button */}
+                                    {/* Pay Button - Hide when PayPal is selected */}
                                     <button 
                                         id="pay-button" 
                                         type="submit" 
-                                        className={`rounded-md bg-orange-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm ${paymentMethod ? 'block' : 'hidden'} disabled:opacity-50`}
+                                        className={`rounded-md bg-orange-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm ${paymentMethod === 'gcash' ? 'block' : 'hidden'} disabled:opacity-50`}
                                         disabled={isSubmitting || !paymentMethod}
                                     >
-                                        {isSubmitting ? 'Processing...' : `Pay with ${paymentMethod}`}
+                                        {isSubmitting ? 'Processing...' : `Pay with GCash`}
                                     </button>
                                 </div>
                             </form>
