@@ -39,7 +39,7 @@ const getAvailableResources = async (req, res) => {
     try {
         const resources = await Resource.findAll({
             where: { is_available: true },
-            attributes: ['id', 'name', 'type', 'capacity'],
+            attributes: ['id', 'name', 'type', 'capacity', 'quantity', 'available_quantity'],
             order: [['type', 'ASC'], ['name', 'ASC']]
         });
 
@@ -68,6 +68,11 @@ const assignResourceToBooking = async (req, res) => {
             return res.status(404).json({ message: 'Resource not found' });
         }
 
+        // Check if resource has available quantity
+        if (resource.available_quantity <= 0) {
+            return res.status(400).json({ message: `No ${resource.name} available. Current available: 0` });
+        }
+
         // Check if resource is already assigned to this booking
         const existingAssignment = await ResourceSchedule.findOne({
             where: {
@@ -80,6 +85,10 @@ const assignResourceToBooking = async (req, res) => {
             return res.status(400).json({ message: 'Resource already assigned to this booking' });
         }
 
+        // Deduct available quantity
+        resource.available_quantity -= 1;
+        await resource.save();
+
         // Create resource schedule
         const schedule = await ResourceSchedule.create({
             resource_id,
@@ -88,9 +97,12 @@ const assignResourceToBooking = async (req, res) => {
             end_time
         });
 
+        console.log(`✅ Resource ${resource.name} assigned. Available: ${resource.available_quantity + 1} → ${resource.available_quantity}`);
+
         res.status(201).json({
             message: 'Resource assigned successfully',
-            schedule
+            schedule,
+            remaining_quantity: resource.available_quantity
         });
     } catch (error) {
         console.error('Error assigning resource:', error);
@@ -107,16 +119,27 @@ const unassignResourceFromBooking = async (req, res) => {
             where: {
                 id: scheduleId,
                 tour_booking_id: id
-            }
+            },
+            include: [Resource]
         });
 
         if (!schedule) {
             return res.status(404).json({ message: 'Resource assignment not found' });
         }
 
+        // Restore available quantity when unassigning
+        const resource = schedule.Resource;
+        resource.available_quantity += 1;
+        await resource.save();
+
         await schedule.destroy();
 
-        res.json({ message: 'Resource un-assigned successfully' });
+        console.log(`✅ Resource ${resource.name} unassigned. Available: ${resource.available_quantity - 1} → ${resource.available_quantity}`);
+
+        res.json({ 
+            message: 'Resource un-assigned successfully',
+            restored_quantity: resource.available_quantity
+        });
     } catch (error) {
         console.error('Error un-assigning resource:', error);
         res.status(500).json({ message: 'Server error' });

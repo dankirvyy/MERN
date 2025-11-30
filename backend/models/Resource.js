@@ -14,6 +14,22 @@ const Resource = sequelize.define('Resource', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    quantity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 10,
+        validate: {
+            min: 0
+        }
+    },
+    available_quantity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 10,
+        validate: {
+            min: 0
+        }
+    },
     is_available: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

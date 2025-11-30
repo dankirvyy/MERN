@@ -107,12 +107,19 @@ exports.getDashboard = async (req, res) => {
 exports.getAvailableRooms = async (req, res) => {
     try {
         const { roomTypeId } = req.params;
+        const { checkIn, checkOut } = req.query;
 
-        // Get all rooms of this type
+        // If dates are provided, use date-based availability checking
+        if (checkIn && checkOut) {
+            const { getAvailableRoomsByType } = require('../utils/availabilityUtils');
+            const rooms = await getAvailableRoomsByType(roomTypeId, checkIn, checkOut);
+            return res.json({ rooms });
+        }
+
+        // Fallback: Get all rooms of this type (for backwards compatibility)
         const rooms = await Room.findAll({
             where: {
-                room_type_id: roomTypeId,
-                status: 'available'
+                room_type_id: roomTypeId
             },
             include: {
                 model: RoomType,
@@ -142,10 +149,25 @@ exports.assignRoom = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // Check if room is available
+        // Check if room exists
         const room = await Room.findByPk(roomId);
-        if (!room || room.status !== 'available') {
-            return res.status(400).json({ message: 'Room is not available' });
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found' });
+        }
+
+        // Check if room is available for the booking dates
+        const { isRoomAvailable } = require('../utils/availabilityUtils');
+        const available = await isRoomAvailable(
+            roomId,
+            booking.check_in_date,
+            booking.check_out_date,
+            booking.id // Exclude current booking
+        );
+
+        if (!available) {
+            return res.status(400).json({ 
+                message: 'This room is already booked for these dates. Please choose a different room.' 
+            });
         }
 
         // Check for conflicts

@@ -64,6 +64,9 @@ app.use('/api/room-types', require('./routes/roomTypes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes')); // Payment routes
+app.use('/api/chatbot', require('./routes/chatbot')); // Chatbot routes
+app.use('/api/availability', require('./routes/availability')); // Availability checking
+app.use('/api/contact', require('./routes/contactRoutes')); // Contact routes
 
 
 // --- Start Server ---

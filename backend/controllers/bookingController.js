@@ -8,6 +8,7 @@ const Invoice = require('../models/Invoice');
 const InvoiceItem = require('../models/InvoiceItem');
 const { Op } = require('sequelize');
 const { sendBookingConfirmation, sendTourBookingConfirmation } = require('../utils/emailService');
+const { getAvailableRoomsByType } = require('../utils/availabilityUtils');
 
 // @desc    Get logged-in user's room bookings
 // @route   GET /api/bookings/my-rooms
@@ -95,6 +96,21 @@ exports.createRoomBooking = async (req, res) => {
         
         const guest_id = req.user.id; // From our 'protect' middleware
 
+        // Get user to check VIP status
+        const user = await User.findByPk(guest_id);
+        
+        // Apply VIP discount (15% off for VIP guests)
+        let finalPrice = total_price;
+        let discountAmount = 0;
+        let discountPercentage = 0;
+        
+        if (user.guest_type === 'vip') {
+            discountPercentage = 15;
+            discountAmount = total_price * 0.15;
+            finalPrice = total_price - discountAmount;
+            console.log(`🌟 VIP Discount Applied: ${discountPercentage}% off (₱${discountAmount.toFixed(2)})`);
+        }
+
         // Check if guest already has an active booking (pending or confirmed)
         const existingBooking = await Booking.findOne({
             where: {
@@ -109,6 +125,15 @@ exports.createRoomBooking = async (req, res) => {
             });
         }
 
+        // Check if there are available rooms for the selected dates
+        const availableRooms = await getAvailableRoomsByType(room_type_id, check_in_date, check_out_date);
+        
+        if (availableRooms.length === 0) {
+            return res.status(400).json({ 
+                message: 'Sorry, no rooms of this type are available for the selected dates. Please choose different dates or a different room type.' 
+            });
+        }
+
         // 1. Create the booking without room assignment - status is 'pending' until front desk assigns room
         const booking = await Booking.create({
             guest_id: guest_id,
@@ -118,17 +143,16 @@ exports.createRoomBooking = async (req, res) => {
             check_out_date: check_out_date,
             check_in_time: check_in_time || '14:00:00',
             check_out_time: check_out_time || '12:00:00',
-            total_price: total_price,
+            total_price: finalPrice,
             status: 'pending', // Pending until front desk assigns room and confirms
             payment_status: req.body.payment_status || 'paid',
-            amount_paid: req.body.amount_paid || total_price,
+            amount_paid: req.body.amount_paid || finalPrice,
             balance_due: req.body.balance_due || 0,
             payment_method: payment_method || null
         });
 
         // 2. Send booking confirmation email
         try {
-            const user = await User.findByPk(guest_id);
             const roomType = await RoomType.findByPk(room_type_id);
             
             const bookingDetails = {
@@ -138,7 +162,12 @@ exports.createRoomBooking = async (req, res) => {
                 'Check-out Date': new Date(check_out_date).toLocaleDateString(),
                 'Check-in Time': check_in_time || '2:00 PM',
                 'Check-out Time': check_out_time || '12:00 PM',
-                'Total Amount': `₱${total_price.toLocaleString()}`,
+                ...(user.guest_type === 'vip' && {
+                    'Original Price': `₱${total_price.toLocaleString()}`,
+                    'VIP Discount': `${discountPercentage}% (₱${discountAmount.toFixed(2)})`,
+                    'Guest Status': '🌟 VIP Member'
+                }),
+                'Total Amount': `₱${finalPrice.toLocaleString()}`,
                 'Payment Status': 'Paid',
                 'Status': 'Pending Room Assignment'
             };
@@ -163,17 +192,22 @@ exports.createRoomBooking = async (req, res) => {
                 booking_id: booking.id,
                 issue_date: new Date(),
                 due_date: dueDate,
-                total_amount: total_price,
+                total_amount: finalPrice,
                 status: invoiceStatus
             });
 
             // Create invoice item for the room booking
+            let description = `${roomType.name} - Room Booking`;
+            if (user.guest_type === 'vip') {
+                description += ` (VIP Discount: ${discountPercentage}%)`;
+            }
+            
             await InvoiceItem.create({
                 invoice_id: invoice.id,
-                description: `${roomType.name} - Room Booking`,
+                description: description,
                 quantity: 1,
-                unit_price: total_price,
-                total: total_price
+                unit_price: finalPrice,
+                total: finalPrice
             });
 
             console.log('✅ Invoice created for booking ID:', booking.id, 'Invoice ID:', invoice.id);
@@ -206,6 +240,21 @@ exports.createTourBooking = async (req, res) => {
 
         const guest_id = req.user.id; // From our 'protect' middleware
 
+        // Get user to check VIP status
+        const user = await User.findByPk(guest_id);
+        
+        // Apply VIP discount (10% off for VIP guests on tours)
+        let finalPrice = total_price;
+        let discountAmount = 0;
+        let discountPercentage = 0;
+        
+        if (user.guest_type === 'vip') {
+            discountPercentage = 10;
+            discountAmount = total_price * 0.10;
+            finalPrice = total_price - discountAmount;
+            console.log(`🌟 VIP Tour Discount Applied: ${discountPercentage}% off (₱${discountAmount.toFixed(2)})`);
+        }
+
         // Check if guest already has an active tour booking (pending or confirmed)
         const existingTourBooking = await TourBooking.findOne({
             where: {
@@ -228,10 +277,10 @@ exports.createTourBooking = async (req, res) => {
             tour_id: tour_id,
             booking_date: booking_date,
             number_of_pax: number_of_pax,
-            total_price: total_price,
+            total_price: finalPrice,
             status: 'pending', // Pending until admin confirms
             payment_status: req.body.payment_status || 'paid',
-            amount_paid: req.body.amount_paid || total_price,
+            amount_paid: req.body.amount_paid || finalPrice,
             balance_due: req.body.balance_due || 0,
             payment_method: payment_method || null
         });
@@ -239,7 +288,6 @@ exports.createTourBooking = async (req, res) => {
         // 4. Send tour booking confirmation email
         try {
             console.log('📧 Preparing to send tour booking confirmation email...');
-            const user = await User.findByPk(guest_id);
             const tour = await Tour.findByPk(tour_id);
             
             console.log('User email:', user.email);
@@ -251,7 +299,12 @@ exports.createTourBooking = async (req, res) => {
                 'Booking Date': new Date(booking_date).toLocaleDateString(),
                 'Number of Guests': number_of_pax,
                 'Price per Person': `₱${tour.price_per_person.toLocaleString()}`,
-                'Total Amount': `₱${total_price.toLocaleString()}`,
+                ...(user.guest_type === 'vip' && {
+                    'Original Price': `₱${total_price.toLocaleString()}`,
+                    'VIP Discount': `${discountPercentage}% (₱${discountAmount.toFixed(2)})`,
+                    'Guest Status': '🌟 VIP Member'
+                }),
+                'Total Amount': `₱${finalPrice.toLocaleString()}`,
                 'Payment Status': 'Paid',
                 'Status': 'Pending Confirmation'
             };
@@ -280,17 +333,22 @@ exports.createTourBooking = async (req, res) => {
                 tour_booking_id: booking.id,
                 issue_date: new Date(),
                 due_date: dueDate,
-                total_amount: total_price,
+                total_amount: finalPrice,
                 status: invoiceStatus
             });
 
             // Create invoice item for the tour
+            let description = `${tour.name} - Tour Booking`;
+            if (user.guest_type === 'vip') {
+                description += ` (VIP Discount: ${discountPercentage}%)`;
+            }
+            
             await InvoiceItem.create({
                 invoice_id: invoice.id,
-                description: `${tour.name} - Tour Booking`,
+                description: description,
                 quantity: number_of_pax,
                 unit_price: tour.price_per_person,
-                total: total_price
+                total: finalPrice
             });
 
             console.log('✅ Invoice created for tour booking ID:', booking.id, 'Invoice ID:', invoice.id);

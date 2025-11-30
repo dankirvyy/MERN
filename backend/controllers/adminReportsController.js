@@ -232,7 +232,26 @@ exports.updateTourBookingStatus = async (req, res) => {
             return res.status(404).json({ message: 'Tour booking not found' });
         }
 
+        const previousStatus = tourBooking.status;
         await tourBooking.update({ status });
+
+        // If completing or cancelling, restore resource quantities
+        if ((status === 'completed' || status === 'cancelled') && previousStatus !== 'completed' && previousStatus !== 'cancelled') {
+            const ResourceSchedule = require('../models/ResourceSchedule');
+            const Resource = require('../models/Resource');
+            
+            const assignedResources = await ResourceSchedule.findAll({
+                where: { tour_booking_id: req.params.id },
+                include: [Resource]
+            });
+
+            for (const schedule of assignedResources) {
+                const resource = schedule.Resource;
+                resource.available_quantity += 1;
+                await resource.save();
+                console.log(`✅ Resource ${resource.name} restored (${status}). Available: ${resource.available_quantity - 1} → ${resource.available_quantity}`);
+            }
+        }
 
         // If completing, refresh guest metrics
         if (status === 'completed' && tourBooking.guest_id) {
@@ -392,12 +411,28 @@ exports.assignResource = async (req, res) => {
             });
         }
 
+        // Get resource and deduct available quantity
+        const resource = await Resource.findByPk(resource_id);
+        if (!resource) {
+            return res.status(404).json({ message: 'Resource not found' });
+        }
+
+        if (resource.available_quantity <= 0) {
+            return res.status(400).json({ message: `No ${resource.name} available. Current available: 0` });
+        }
+
+        // Deduct available quantity
+        resource.available_quantity -= 1;
+        await resource.save();
+
         const schedule = await ResourceSchedule.create({
             resource_id,
             tour_booking_id,
             start_time,
             end_time
         });
+
+        console.log(`✅ Resource ${resource.name} assigned. Available: ${resource.available_quantity + 1} → ${resource.available_quantity}`);
 
         res.status(201).json(schedule);
     } catch (error) {
@@ -410,12 +445,22 @@ exports.assignResource = async (req, res) => {
 // @access  Private/Admin
 exports.unassignResource = async (req, res) => {
     try {
-        const schedule = await ResourceSchedule.findByPk(req.params.id);
+        const schedule = await ResourceSchedule.findByPk(req.params.id, {
+            include: [Resource]
+        });
         if (!schedule) {
             return res.status(404).json({ message: 'Schedule not found' });
         }
 
+        // Restore available quantity
+        const resource = schedule.Resource;
+        resource.available_quantity += 1;
+        await resource.save();
+
         await schedule.destroy();
+
+        console.log(`✅ Resource ${resource.name} unassigned. Available: ${resource.available_quantity - 1} → ${resource.available_quantity}`);
+
         res.json({ message: 'Resource unassigned successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });

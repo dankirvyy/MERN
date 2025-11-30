@@ -1,11 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser } = require('../controllers/authController');
+const { 
+    registerUser, 
+    loginUser,
+    sendSignupVerification,
+    verifyAndRegister,
+    forgotPassword,
+    verifyResetCode,
+    resetPassword
+} = require('../controllers/authController');
 const passport = require('../config/passport');
 const jwt = require('jsonwebtoken');
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+
+// Email verification routes
+router.post('/send-verification', sendSignupVerification);
+router.post('/verify-and-register', verifyAndRegister);
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-code', verifyResetCode);
+router.post('/reset-password', resetPassword);
 
 // Google OAuth routes
 router.get('/google', 

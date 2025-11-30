@@ -759,47 +759,15 @@ exports.getAvailableRoomsForAssignment = async (req, res) => {
     try {
         const { room_type_id, check_in, check_out } = req.query;
 
-        // Get all rooms of this type
-        const rooms = await Room.findAll({
-            where: {
-                room_type_id: room_type_id,
-                status: 'available'
-            }
-        });
-
-        // Filter out rooms that have conflicting bookings
-        const availableRooms = [];
-        
-        for (const room of rooms) {
-            const conflictingBooking = await Booking.findOne({
-                where: {
-                    room_id: room.id,
-                    status: { [Op.notIn]: ['cancelled'] },
-                    [Op.or]: [
-                        {
-                            check_in_date: {
-                                [Op.between]: [check_in, check_out]
-                            }
-                        },
-                        {
-                            check_out_date: {
-                                [Op.between]: [check_in, check_out]
-                            }
-                        },
-                        {
-                            [Op.and]: [
-                                { check_in_date: { [Op.lte]: check_in } },
-                                { check_out_date: { [Op.gte]: check_out } }
-                            ]
-                        }
-                    ]
-                }
+        if (!room_type_id || !check_in || !check_out) {
+            return res.status(400).json({ 
+                message: 'room_type_id, check_in, and check_out are required' 
             });
-
-            if (!conflictingBooking) {
-                availableRooms.push(room);
-            }
         }
+
+        // Use the centralized availability utility
+        const { getAvailableRoomsByType } = require('../utils/availabilityUtils');
+        const availableRooms = await getAvailableRoomsByType(room_type_id, check_in, check_out);
 
         res.json(availableRooms);
     } catch (error) {
@@ -839,6 +807,21 @@ exports.assignRoomToBooking = async (req, res) => {
         const room = await Room.findByPk(room_id);
         if (!room) {
             return res.status(404).json({ message: 'Room not found' });
+        }
+
+        // Check if the room is available for the booking dates
+        const { isRoomAvailable } = require('../utils/availabilityUtils');
+        const available = await isRoomAvailable(
+            room_id, 
+            booking.check_in_date, 
+            booking.check_out_date,
+            booking.id // Exclude current booking from conflict check
+        );
+
+        if (!available) {
+            return res.status(400).json({ 
+                message: 'This room is already booked for the selected dates. Please choose a different room.' 
+            });
         }
 
         // Update booking with room assignment and confirm it

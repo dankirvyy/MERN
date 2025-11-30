@@ -275,11 +275,325 @@ const sendTourRefundConfirmation = async (recipientEmail, guestName, refundDetai
     }
 };
 
+/**
+ * Send email verification code
+ */
+const sendVerificationCode = async (recipientEmail, name, verificationCode) => {
+    const subject = 'Email Verification Code - Visit Mindoro';
+    
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Email Verification</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+            <table cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                <tr>
+                    <td align="center">
+                        <table cellpadding="0" cellspacing="0" style="width: 100%; background: #ffffff; border: 1px solid #dddddd;">
+                            <tr>
+                                <td style="background: #f8f8f8; padding: 20px; text-align: center;">
+                                    <h1 style="color: #dd4814; font-size: 24px; margin: 0;">Visit Mindoro</h1>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="font-size: 20px; color: #333333;">Email Verification</h2>
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">Hi ${name},</p>
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">Thank you for signing up with Visit Mindoro! Please use the verification code below to complete your registration:</p>
+                                    
+                                    <div style="background-color: #f8f8f8; border: 2px dashed #dd4814; padding: 20px; text-align: center; margin: 30px 0;">
+                                        <h1 style="font-size: 36px; color: #dd4814; letter-spacing: 8px; margin: 0;">${verificationCode}</h1>
+                                    </div>
+                                    
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">This code will expire in 10 minutes.</p>
+                                    <p style="font-size: 14px; line-height: 1.5; color: #999999;">If you didn't request this code, please ignore this email.</p>
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">Thank you,<br>The Visit Mindoro Team</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background: #f8f8f8; padding: 20px; text-align: center; font-size: 12px; color: #999999;">
+                                    &copy; ${new Date().getFullYear()} Visit Mindoro. All rights reserved.
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    const textContent = `Hi ${name},
+
+Thank you for signing up with Visit Mindoro!
+
+Your verification code is: ${verificationCode}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, please ignore this email.
+
+Thank you,
+The Visit Mindoro Team`;
+
+    try {
+        await transporter.sendMail({
+            from: {
+                name: process.env.SENDER_NAME || 'Visit Mindoro',
+                address: process.env.SENDER_EMAIL
+            },
+            to: recipientEmail,
+            replyTo: process.env.REPLY_TO_EMAIL || process.env.SENDER_EMAIL,
+            subject: subject,
+            text: textContent,
+            html: htmlContent,
+            headers: {
+                'X-Priority': '1',
+                'X-MSMail-Priority': 'High',
+                'Importance': 'high'
+            }
+        });
+        console.log('✅ Verification code email sent to:', recipientEmail);
+        return true;
+    } catch (error) {
+        console.error('❌ Error sending verification email:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
+/**
+ * Send password reset code
+ */
+const sendPasswordResetCode = async (recipientEmail, name, resetCode) => {
+    const subject = 'Password Reset Code - Visit Mindoro';
+    
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Password Reset</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+            <table cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                <tr>
+                    <td align="center">
+                        <table cellpadding="0" cellspacing="0" style="width: 100%; background: #ffffff; border: 1px solid #dddddd;">
+                            <tr>
+                                <td style="background: #f8f8f8; padding: 20px; text-align: center;">
+                                    <h1 style="color: #dd4814; font-size: 24px; margin: 0;">Visit Mindoro</h1>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="font-size: 20px; color: #333333;">Password Reset Request</h2>
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">Hi ${name},</p>
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">We received a request to reset your password. Please use the verification code below to proceed:</p>
+                                    
+                                    <div style="background-color: #f8f8f8; border: 2px dashed #dd4814; padding: 20px; text-align: center; margin: 30px 0;">
+                                        <h1 style="font-size: 36px; color: #dd4814; letter-spacing: 8px; margin: 0;">${resetCode}</h1>
+                                    </div>
+                                    
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">This code will expire in 10 minutes.</p>
+                                    <p style="font-size: 14px; line-height: 1.5; color: #999999;">If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+                                    <p style="font-size: 16px; line-height: 1.5; color: #333333;">Thank you,<br>The Visit Mindoro Team</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background: #f8f8f8; padding: 20px; text-align: center; font-size: 12px; color: #999999;">
+                                    &copy; ${new Date().getFullYear()} Visit Mindoro. All rights reserved.
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    const textContent = `Hi ${name},
+
+We received a request to reset your password.
+
+Your password reset code is: ${resetCode}
+
+This code will expire in 10 minutes.
+
+If you didn't request a password reset, please ignore this email or contact support if you have concerns.
+
+Thank you,
+The Visit Mindoro Team`;
+
+    try {
+        await transporter.sendMail({
+            from: {
+                name: process.env.SENDER_NAME || 'Visit Mindoro',
+                address: process.env.SENDER_EMAIL
+            },
+            to: recipientEmail,
+            replyTo: process.env.REPLY_TO_EMAIL || process.env.SENDER_EMAIL,
+            subject: subject,
+            text: textContent,
+            html: htmlContent,
+            headers: {
+                'X-Priority': '1',
+                'X-MSMail-Priority': 'High',
+                'Importance': 'high'
+            }
+        });
+        console.log('✅ Password reset code email sent to:', recipientEmail);
+        return true;
+    } catch (error) {
+        console.error('❌ Error sending password reset email:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
+/**
+ * Send contact form confirmation to user
+ */
+const sendContactConfirmation = async (recipientEmail, name) => {
+    const subject = 'Message Received - Visit Mindoro';
+    const title = 'Thank You for Contacting Us';
+    const introMessage = 'We have received your message and will get back to you as soon as possible.';
+    const details = {
+        'Status': 'Message Received',
+        'Expected Response Time': 'Within 24-48 hours'
+    };
+    const callToAction = 'If you need urgent assistance, please call us directly at (+63) 123-456-7890.';
+
+    const htmlContent = generateEmailTemplate(title, name, introMessage, details, callToAction);
+
+    const mailOptions = {
+        from: {
+            name: process.env.SENDER_NAME || 'Visit Mindoro',
+            address: process.env.SENDER_EMAIL || 'noreply@visitmindoro.com'
+        },
+        to: recipientEmail,
+        replyTo: process.env.REPLY_TO_EMAIL || process.env.SENDER_EMAIL,
+        subject: subject,
+        html: htmlContent
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Contact confirmation email sent to:', recipientEmail);
+        console.log('Message ID:', info.messageId);
+        return true;
+    } catch (error) {
+        console.error('❌ Error sending contact confirmation email:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
+/**
+ * Send contact notification to admin
+ */
+const sendContactNotificationToAdmin = async (name, email, message) => {
+    const subject = 'New Contact Form Submission - Visit Mindoro';
+    
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>New Contact Form</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+            <table cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; margin: 0 auto;">
+                <tr>
+                    <td align="center">
+                        <table cellpadding="0" cellspacing="0" style="width: 100%; background: #ffffff; border: 1px solid #dddddd;">
+                            <tr>
+                                <td style="background: #dd4814; padding: 20px; text-align: center;">
+                                    <h1 style="color: #ffffff; font-size: 24px; margin: 0;">New Contact Form Submission</h1>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="font-size: 18px; color: #333333;">Contact Details:</h2>
+                                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                                        <tr>
+                                            <td style="padding: 10px 0; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #555555;">Name</td>
+                                            <td style="padding: 10px 0; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #111111; text-align: right;"><strong>${name}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 10px 0; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #555555;">Email</td>
+                                            <td style="padding: 10px 0; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #111111; text-align: right;"><strong>${email}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 10px 0; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #555555;">Date</td>
+                                            <td style="padding: 10px 0; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #111111; text-align: right;"><strong>${new Date().toLocaleString()}</strong></td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <h3 style="font-size: 16px; color: #333333; margin-top: 20px;">Message:</h3>
+                                    <div style="background: #f8f8f8; padding: 15px; border-left: 4px solid #dd4814; margin: 10px 0;">
+                                        <p style="font-size: 14px; line-height: 1.6; color: #333333; margin: 0;">${message}</p>
+                                    </div>
+                                    
+                                    <p style="font-size: 14px; line-height: 1.5; color: #666666; margin-top: 20px;">
+                                        Please respond to this inquiry at your earliest convenience.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background: #f8f8f8; padding: 20px; text-align: center; font-size: 12px; color: #999999;">
+                                    &copy; ${new Date().getFullYear()} Visit Mindoro. All rights reserved.
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    const adminEmail = 'dankirvymanongsong@gmail.com';
+
+    const mailOptions = {
+        from: {
+            name: process.env.SENDER_NAME || 'Visit Mindoro',
+            address: process.env.SENDER_EMAIL || 'noreply@visitmindoro.com'
+        },
+        to: adminEmail,
+        replyTo: email, // Reply to the person who submitted the form
+        subject: subject,
+        html: htmlContent
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Contact notification sent to admin:', adminEmail);
+        console.log('Message ID:', info.messageId);
+        return true;
+    } catch (error) {
+        console.error('❌ Error sending admin notification:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
 module.exports = {
     sendBookingConfirmation,
     sendTourBookingConfirmation,
     sendRoomAssignmentNotification,
     sendTourConfirmationEmail,
     sendRefundConfirmation,
-    sendTourRefundConfirmation
+    sendTourRefundConfirmation,
+    sendVerificationCode,
+    sendPasswordResetCode,
+    sendContactConfirmation,
+    sendContactNotificationToAdmin
 };
