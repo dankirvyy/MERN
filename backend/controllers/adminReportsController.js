@@ -69,7 +69,7 @@ exports.getReports = async (req, res) => {
             include: [
                 {
                     model: Room,
-                    include: [{ model: RoomType, attributes: ['name'] }]
+                    include: [{ model: RoomType, as: 'RoomType', attributes: ['name'] }]
                 }
             ],
             where: {
@@ -137,7 +137,7 @@ exports.exportBookings = async (req, res) => {
             include: [
                 {
                     model: Room,
-                    include: [{ model: RoomType }]
+                    include: [{ model: RoomType, as: 'RoomType' }]
                 }
             ],
             order: [['created_at', 'DESC']]
@@ -498,6 +498,12 @@ exports.getResourceCalendar = async (req, res) => {
             const currentDate = new Date(selectedYear, selectedMonth - 1, day);
             const isToday = currentDate.toDateString() === today.toDateString();
 
+            // Format date as YYYY-MM-DD without timezone conversion
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(currentDate.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${dayStr}`;
+
             // Get schedules for this day
             const schedules = await ResourceSchedule.findAll({
                 include: [
@@ -509,7 +515,7 @@ exports.getResourceCalendar = async (req, res) => {
                     {
                         model: TourBooking,
                         where: {
-                            booking_date: currentDate.toISOString().split('T')[0],
+                            booking_date: formattedDate,
                             status: { [Op.in]: ['confirmed', 'pending'] }
                         },
                         required: true,

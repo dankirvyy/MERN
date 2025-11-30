@@ -86,6 +86,7 @@ function ConfirmBookingPage() {
     const { state } = useLocation(); 
     const { booking } = state || {};
 
+    const [paymentOption, setPaymentOption] = useState('full'); // 'full' or 'downpayment'
     const [paymentMethod, setPaymentMethod] = useState('');
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +113,10 @@ function ConfirmBookingPage() {
             // Clear existing buttons
             paypalButtonRef.current.innerHTML = '';
 
-            const usdAmount = (booking.bookingData.total_price / 55).toFixed(2);
+            const paymentAmount = paymentOption === 'full' 
+                ? booking.bookingData.total_price 
+                : booking.bookingData.total_price * 0.5;
+            const usdAmount = (paymentAmount / 55).toFixed(2);
 
             window.paypal.Buttons({
                 createOrder: (data, actions) => {
@@ -130,25 +134,38 @@ function ConfirmBookingPage() {
                     // Store booking data and payment info, then create booking directly
                     const token = sessionStorage.getItem('token');
                     try {
+                        const paymentAmount = paymentOption === 'full' 
+                            ? booking.bookingData.total_price 
+                            : booking.bookingData.total_price * 0.5;
+                        
                         const verifyResponse = await axios.post('http://localhost:5001/api/payment/paypal/verify/room', {
                             order_id: details.id,
-                            amount: booking.bookingData.total_price
+                            amount: paymentAmount
                         }, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
 
                         if (verifyResponse.data.success) {
+                            const paymentAmount = paymentOption === 'full' 
+                                ? booking.bookingData.total_price 
+                                : booking.bookingData.total_price * 0.5;
+                            const balanceDue = booking.bookingData.total_price - paymentAmount;
+                            
                             // Create booking directly (don't call finalizeBooking to avoid duplicate)
                             await axios.post('http://localhost:5001/api/bookings/room', {
                                 ...booking.bookingData,
                                 payment_method: 'paypal',
-                                payment_id: details.id
+                                payment_id: details.id,
+                                payment_status: paymentOption === 'full' ? 'paid' : 'partial',
+                                amount_paid: paymentAmount,
+                                balance_due: balanceDue
                             }, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
                             navigate('/my-profile');
                         }
-                    } catch (err) {
+                    } catch (error) {
+                        console.error('PayPal verification error:', error);
                         setError('PayPal payment verification failed');
                         setIsSubmitting(false);
                     }
@@ -160,7 +177,7 @@ function ConfirmBookingPage() {
                 }
             }).render(paypalButtonRef.current);
         }
-    }, [paymentMethod, paypalLoaded, booking]);
+    }, [paymentMethod, paypalLoaded, booking, paymentOption, navigate]);
 
     if (!booking) {
         return (
@@ -219,10 +236,19 @@ function ConfirmBookingPage() {
 
         try {
             if (method === 'gcash') {
+                // Calculate amount based on payment option
+                const paymentAmount = paymentOption === 'full' 
+                    ? booking.bookingData.total_price 
+                    : booking.bookingData.total_price * 0.5;
+                
                 // Create GCash payment source
                 const { data } = await axios.post('http://localhost:5001/api/payment/gcash/create-source/room', {
-                    amount: booking.bookingData.total_price,
-                    booking_data: booking.bookingData,
+                    amount: paymentAmount,
+                    booking_data: {
+                        ...booking.bookingData,
+                        payment_option: paymentOption,
+                        amount_to_pay: paymentAmount
+                    },
                     guest_data: booking.guestData
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -231,7 +257,12 @@ function ConfirmBookingPage() {
                 // Store both booking data and source_id in localStorage before redirect
                 console.log('Storing booking data:', booking);
                 console.log('Storing source_id:', data.source_id);
-                localStorage.setItem('pending_booking', JSON.stringify(booking));
+                const bookingWithPaymentOption = {
+                    ...booking,
+                    paymentOption,
+                    amountToPay: paymentAmount
+                };
+                localStorage.setItem('pending_booking', JSON.stringify(bookingWithPaymentOption));
                 localStorage.setItem('paymongo_source_id', data.source_id);
                 
                 // Verify storage
@@ -306,6 +337,43 @@ function ConfirmBookingPage() {
                         <div className="px-6 py-4 bg-gray-50 border-t">
                             <form id="booking-payment-form" onSubmit={handlePaymentSubmit}>
                                 {error && <div className="mb-4 text-center text-red-600">{error}</div>}
+                                
+                                {/* Payment Option Selection */}
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-700 mb-3">Payment Option</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <label className="cursor-pointer">
+                                            <input 
+                                                type="radio" 
+                                                name="payment_option" 
+                                                value="full" 
+                                                checked={paymentOption === 'full'}
+                                                onChange={(e) => setPaymentOption(e.target.value)} 
+                                                className="peer hidden" 
+                                            />
+                                            <div className="p-4 rounded-lg border-2 transition-all peer-checked:border-orange-600 peer-checked:bg-orange-50">
+                                                <div className="font-semibold text-gray-900">Full Payment</div>
+                                                <div className="text-2xl font-bold text-orange-600 mt-1">{formatPrice(booking.bookingData.total_price)}</div>
+                                                <div className="text-sm text-gray-500 mt-1">Pay the full amount now</div>
+                                            </div>
+                                        </label>
+                                        <label className="cursor-pointer">
+                                            <input 
+                                                type="radio" 
+                                                name="payment_option" 
+                                                value="downpayment" 
+                                                checked={paymentOption === 'downpayment'}
+                                                onChange={(e) => setPaymentOption(e.target.value)} 
+                                                className="peer hidden" 
+                                            />
+                                            <div className="p-4 rounded-lg border-2 transition-all peer-checked:border-orange-600 peer-checked:bg-orange-50">
+                                                <div className="font-semibold text-gray-900">Downpayment (50%)</div>
+                                                <div className="text-2xl font-bold text-orange-600 mt-1">{formatPrice(booking.bookingData.total_price * 0.5)}</div>
+                                                <div className="text-sm text-gray-500 mt-1">Pay remaining balance on arrival</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
                                 
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Choose a payment method</label>

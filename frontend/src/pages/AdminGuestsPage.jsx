@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
 
@@ -7,7 +6,6 @@ const AdminGuestsPage = () => {
     const [guests, setGuests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const navigate = useNavigate();
 
     useEffect(() => {
         fetchGuests();
@@ -37,8 +35,9 @@ const AdminGuestsPage = () => {
         fetchGuests(search);
     };
 
-    const handleDelete = async (id, name) => {
-        if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    const handleSuspend = async (id, name, isSuspended) => {
+        const action = isSuspended ? 'unsuspend' : 'suspend';
+        if (!confirm(`Are you sure you want to ${action} ${name}?`)) return;
 
         try {
             const token = sessionStorage.getItem('token');
@@ -48,11 +47,14 @@ const AdminGuestsPage = () => {
                 }
             };
 
-            await axios.delete(`http://localhost:5001/api/admin/guests/${id}`, config);
-            alert('Guest deleted successfully');
+            await axios.put(`http://localhost:5001/api/admin/guests/${id}/suspend`, 
+                { is_suspended: !isSuspended },
+                config
+            );
+            alert(`Guest ${action}ed successfully`);
             fetchGuests(search);
         } catch (error) {
-            alert(error.response?.data?.message || 'Error deleting guest');
+            alert(error.response?.data?.message || `Error ${action}ing guest`);
         }
     };
 
@@ -123,6 +125,9 @@ const AdminGuestsPage = () => {
                                 Type
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Visits
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -139,7 +144,7 @@ const AdminGuestsPage = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {guests.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
                                     No guests found
                                 </td>
                             </tr>
@@ -179,6 +184,13 @@ const AdminGuestsPage = () => {
                                             {(guest.guest_type || 'new').toUpperCase()}
                                         </span>
                                     </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                            guest.is_suspended ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                        }`}>
+                                            {guest.is_suspended ? 'SUSPENDED' : 'ACTIVE'}
+                                        </span>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {guest.total_visits || 0}
                                     </td>
@@ -192,16 +204,16 @@ const AdminGuestsPage = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <button
-                                            onClick={() => navigate(`/admin/guests/${guest.id}`)}
+                                            onClick={() => window.location.href = `/admin/guests/${guest.id}`}
                                             className="text-blue-600 hover:text-blue-900 mr-4"
                                         >
                                             View
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(guest.id, `${guest.first_name} ${guest.last_name}`)}
-                                            className="text-red-600 hover:text-red-900"
+                                            onClick={() => handleSuspend(guest.id, `${guest.first_name} ${guest.last_name}`, guest.is_suspended)}
+                                            className={guest.is_suspended ? 'text-green-600 hover:text-green-900' : 'text-orange-600 hover:text-orange-900'}
                                         >
-                                            Delete
+                                            {guest.is_suspended ? 'Unsuspend' : 'Suspend'}
                                         </button>
                                     </td>
                                 </tr>

@@ -207,9 +207,79 @@ const sendTourConfirmationEmail = async (recipientEmail, guestName, tourDetails)
     }
 };
 
+/**
+ * Send refund confirmation email for room booking
+ */
+const sendRefundConfirmation = async (recipientEmail, guestName, refundDetails) => {
+    const subject = 'Refund Confirmation - Visit Mindoro';
+    const title = 'Refund Processed';
+    const introMessage = 'We have processed the refund for your cancelled booking.';
+    const callToAction = 'The refund will be processed to your original payment method within 5-10 business days. If you have any questions, please don\'t hesitate to contact us.';
+
+    const htmlContent = generateEmailTemplate(title, guestName, introMessage, refundDetails, callToAction);
+
+    const mailOptions = {
+        from: {
+            name: process.env.SENDER_NAME || 'Visit Mindoro',
+            address: process.env.SENDER_EMAIL || 'noreply@visitmindoro.com'
+        },
+        to: recipientEmail,
+        replyTo: process.env.REPLY_TO_EMAIL || process.env.SENDER_EMAIL,
+        subject: subject,
+        html: htmlContent
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Refund confirmation email sent to:', recipientEmail);
+        console.log('Message ID:', info.messageId);
+        return true;
+    } catch (error) {
+        console.error('❌ Error sending refund confirmation email:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
+/**
+ * Send refund confirmation email for tour booking
+ */
+const sendTourRefundConfirmation = async (recipientEmail, guestName, refundDetails) => {
+    const subject = 'Tour Refund Confirmation - Visit Mindoro';
+    const title = 'Tour Refund Processed';
+    const introMessage = 'We have processed the refund for your cancelled tour booking.';
+    const callToAction = 'The refund will be processed to your original payment method within 5-10 business days. If you have any questions, please don\'t hesitate to contact us.';
+
+    const htmlContent = generateEmailTemplate(title, guestName, introMessage, refundDetails, callToAction);
+
+    const mailOptions = {
+        from: {
+            name: process.env.SENDER_NAME || 'Visit Mindoro',
+            address: process.env.SENDER_EMAIL || 'noreply@visitmindoro.com'
+        },
+        to: recipientEmail,
+        replyTo: process.env.REPLY_TO_EMAIL || process.env.SENDER_EMAIL,
+        subject: subject,
+        html: htmlContent
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Tour refund confirmation email sent to:', recipientEmail);
+        console.log('Message ID:', info.messageId);
+        return true;
+    } catch (error) {
+        console.error('❌ Error sending tour refund confirmation email:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
 module.exports = {
     sendBookingConfirmation,
     sendTourBookingConfirmation,
     sendRoomAssignmentNotification,
-    sendTourConfirmationEmail
+    sendTourConfirmationEmail,
+    sendRefundConfirmation,
+    sendTourRefundConfirmation
 };

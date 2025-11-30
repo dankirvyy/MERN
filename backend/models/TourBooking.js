@@ -28,7 +28,7 @@ const TourBooking = sequelize.define('TourBooking', {
         defaultValue: 'pending',
     },
     payment_status: {
-        type: DataTypes.ENUM('unpaid', 'partial', 'paid'),
+        type: DataTypes.ENUM('unpaid', 'partial', 'paid', 'refunded'),
         defaultValue: 'unpaid',
     },
     amount_paid: {
@@ -38,6 +38,18 @@ const TourBooking = sequelize.define('TourBooking', {
     balance_due: {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0,
+    },
+    payment_method: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    refunded: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    refund_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
     }
 }, {
     tableName: 'tour_bookings',

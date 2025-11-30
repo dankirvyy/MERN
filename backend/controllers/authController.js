@@ -47,10 +47,18 @@ exports.loginUser = async (req, res) => {
 
         const user = await User.findOne({ 
             where: { email: email },
-            attributes: ['id', 'first_name', 'last_name', 'email', 'password', 'role', 'avatar_filename', 'phone_number']
+            attributes: ['id', 'first_name', 'last_name', 'email', 'password', 'role', 'avatar_filename', 'phone_number', 'is_suspended']
         });
 
-        if (user && (await user.matchPassword(password))) {
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        if (user.is_suspended) {
+            return res.status(403).json({ message: 'Your account has been suspended. Please contact support for assistance.' });
+        }
+
+        if (await user.matchPassword(password)) {
             res.json({
                 _id: user.id,
                 name: `${user.first_name} ${user.last_name}`,

@@ -20,7 +20,7 @@ exports.getInvoices = async (req, res) => {
                     include: [
                         {
                             model: Room,
-                            include: [{ model: RoomType }]
+                            include: [{ model: RoomType, as: 'RoomType' }]
                         },
                         {
                             model: User,
@@ -76,12 +76,14 @@ exports.getInvoices = async (req, res) => {
 // @access  Private/Admin
 exports.getInvoiceStats = async (req, res) => {
     try {
-        const totalInvoices = await Invoice.count();
+        const { Op } = require('sequelize');
+        const totalInvoices = await Invoice.count({ where: { status: { [Op.ne]: 'refunded' } } });
         const paidInvoices = await Invoice.count({ where: { status: 'paid' } });
         const unpaidInvoices = await Invoice.count({ where: { status: 'unpaid' } });
         const partialInvoices = await Invoice.count({ where: { status: 'partial' } });
+        const refundedInvoices = await Invoice.count({ where: { status: 'refunded' } });
 
-        const totalAmount = await Invoice.sum('total_amount') || 0;
+        const totalAmount = await Invoice.sum('total_amount', { where: { status: { [Op.ne]: 'refunded' } } }) || 0;
         const paidAmount = await Invoice.sum('total_amount', { where: { status: 'paid' } }) || 0;
 
         res.json({
@@ -89,6 +91,7 @@ exports.getInvoiceStats = async (req, res) => {
             paidInvoices,
             unpaidInvoices,
             partialInvoices,
+            refundedInvoices,
             totalAmount: parseFloat(totalAmount),
             paidAmount: parseFloat(paidAmount),
             outstandingAmount: parseFloat(totalAmount) - parseFloat(paidAmount)
@@ -110,7 +113,7 @@ exports.getInvoiceById = async (req, res) => {
                     include: [
                         {
                             model: Room,
-                            include: [{ model: RoomType }]
+                            include: [{ model: RoomType, as: 'RoomType' }]
                         }
                     ]
                 },
@@ -156,7 +159,7 @@ exports.createBookingInvoice = async (req, res) => {
             include: [
                 {
                     model: Room,
-                    include: [{ model: RoomType }]
+                    include: [{ model: RoomType, as: 'RoomType' }]
                 }
             ]
         });
@@ -378,7 +381,7 @@ exports.generateInvoicePDF = async (req, res) => {
                     include: [
                         {
                             model: Room,
-                            include: [{ model: RoomType }]
+                            include: [{ model: RoomType, as: 'RoomType' }]
                         },
                         {
                             model: User,

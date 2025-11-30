@@ -62,6 +62,14 @@ function PaymentSuccessPage({ type }) {
                 const bookingData = JSON.parse(bookingDataStr);
 
                 console.log('Creating booking with payment_id:', sourceId);
+                console.log('Payment option:', bookingData.paymentOption);
+                console.log('Amount to pay:', bookingData.amountToPay);
+
+                // Calculate payment details based on payment option
+                const paymentAmount = bookingData.amountToPay || bookingData.bookingData.total_price;
+                const totalPrice = bookingData.bookingData.total_price;
+                const balanceDue = totalPrice - paymentAmount;
+                const paymentStatus = bookingData.paymentOption === 'full' ? 'paid' : 'partial';
 
                 // PayMongo redirecting to success URL means payment was successful
                 // Create the booking directly with the source_id as payment reference
@@ -70,7 +78,10 @@ function PaymentSuccessPage({ type }) {
                 const response = await axios.post(`http://localhost:5001${endpoint}`, {
                     ...bookingData.bookingData,
                     payment_method: 'gcash',
-                    payment_id: sourceId // Use source_id as payment reference
+                    payment_id: sourceId, // Use source_id as payment reference
+                    payment_status: paymentStatus,
+                    amount_paid: paymentAmount,
+                    balance_due: balanceDue
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });

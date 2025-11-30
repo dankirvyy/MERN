@@ -21,6 +21,7 @@ router.get('/dashboard', adminController.getDashboard);
 // ===================================
 router.get('/guests', adminController.getGuests);
 router.get('/guests/:id', adminController.getGuestById);
+router.put('/guests/:id/suspend', adminController.suspendGuest);
 router.delete('/guests/:id', adminController.deleteGuest);
 router.put('/guests/:id/crm', adminController.updateGuestCRM);
 router.post('/guests/:id/refresh-metrics', adminController.refreshGuestMetrics);
@@ -82,9 +83,13 @@ router.delete('/rooms/:id', adminController.deleteRoom);
 router.get('/bookings', adminController.getAllBookings);
 router.get('/bookings/unassigned', adminController.getUnassignedBookings);
 router.put('/bookings/:id/assign-room', adminController.assignRoomToBooking);
+router.put('/bookings/:id/mark-paid', adminController.markBookingPaid);
+router.put('/bookings/:id/refund', adminController.refundBooking);
 router.get('/rooms/available', adminController.getAvailableRoomsForAssignment);
 
 // Tour booking routes - specific routes FIRST
+router.put('/tour-bookings/:id/mark-paid', adminController.markTourBookingPaid);
+router.put('/tour-bookings/:id/refund', adminController.refundTourBooking);
 router.get('/tour-bookings/:id/resources', adminReportsController.getTourBookingResources);
 router.post('/tour-bookings/:id/resources', adminReportsController.assignResource);
 router.patch('/tour-bookings/:id/confirm', adminController.confirmTourBooking);

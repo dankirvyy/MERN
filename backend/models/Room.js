@@ -22,7 +22,7 @@ const Room = sequelize.define('Room', {
 
 // --- Associations ---
 // A Room belongs to one RoomType
-Room.belongsTo(RoomType, { foreignKey: 'room_type_id' });
+Room.belongsTo(RoomType, { foreignKey: 'room_type_id', as: 'RoomType' });
 // A RoomType can have many Rooms
 RoomType.hasMany(Room, { foreignKey: 'room_type_id' });
 

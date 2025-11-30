@@ -50,6 +50,7 @@ exports.getDashboard = async (req, res) => {
                     model: Room,
                     include: {
                         model: RoomType,
+                        as: 'RoomType',
                         attributes: ['name']
                     }
                 },
@@ -77,6 +78,7 @@ exports.getDashboard = async (req, res) => {
                     model: Room,
                     include: {
                         model: RoomType,
+                        as: 'RoomType',
                         attributes: ['name']
                     }
                 },
@@ -114,7 +116,8 @@ exports.getAvailableRooms = async (req, res) => {
             },
             include: {
                 model: RoomType,
-                attributes: ['name']
+                as: 'RoomType',
+                attributes: ['name', 'capacity', 'base_price']
             },
             order: [['room_number', 'ASC']]
         });
@@ -178,7 +181,7 @@ exports.assignRoom = async (req, res) => {
             include: [
                 {
                     model: Room,
-                    include: { model: RoomType }
+                    include: { model: RoomType, as: 'RoomType' }
                 },
                 {
                     model: User,

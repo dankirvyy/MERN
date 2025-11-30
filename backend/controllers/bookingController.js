@@ -23,6 +23,7 @@ exports.getMyRoomBookings = async (req, res) => {
                     required: false, // LEFT JOIN to handle null room_id
                     include: {
                         model: RoomType,
+                        as: 'RoomType',
                         attributes: ['name']
                     }
                 },
@@ -119,9 +120,10 @@ exports.createRoomBooking = async (req, res) => {
             check_out_time: check_out_time || '12:00:00',
             total_price: total_price,
             status: 'pending', // Pending until front desk assigns room and confirms
-            payment_status: 'paid',
-            amount_paid: total_price,
-            balance_due: 0
+            payment_status: req.body.payment_status || 'paid',
+            amount_paid: req.body.amount_paid || total_price,
+            balance_due: req.body.balance_due || 0,
+            payment_method: payment_method || null
         });
 
         // 2. Send booking confirmation email
@@ -154,12 +156,15 @@ exports.createRoomBooking = async (req, res) => {
         // 3. Create invoice for the booking
         try {
             const dueDate = new Date(check_in_date);
+            // Determine invoice status based on payment status
+            const invoiceStatus = req.body.payment_status || 'paid';
+            
             const invoice = await Invoice.create({
                 booking_id: booking.id,
                 issue_date: new Date(),
                 due_date: dueDate,
                 total_amount: total_price,
-                status: 'paid'
+                status: invoiceStatus
             });
 
             // Create invoice item for the room booking
@@ -225,9 +230,10 @@ exports.createTourBooking = async (req, res) => {
             number_of_pax: number_of_pax,
             total_price: total_price,
             status: 'pending', // Pending until admin confirms
-            payment_status: 'paid',
-            amount_paid: total_price,
-            balance_due: 0
+            payment_status: req.body.payment_status || 'paid',
+            amount_paid: req.body.amount_paid || total_price,
+            balance_due: req.body.balance_due || 0,
+            payment_method: payment_method || null
         });
 
         // 4. Send tour booking confirmation email
@@ -267,12 +273,15 @@ exports.createTourBooking = async (req, res) => {
         try {
             const tour = await Tour.findByPk(tour_id);
             const dueDate = new Date(booking_date);
+            // Determine invoice status based on payment status
+            const invoiceStatus = req.body.payment_status || 'paid';
+            
             const invoice = await Invoice.create({
                 tour_booking_id: booking.id,
                 issue_date: new Date(),
                 due_date: dueDate,
                 total_amount: total_price,
-                status: 'paid'
+                status: invoiceStatus
             });
 
             // Create invoice item for the tour
@@ -312,15 +321,12 @@ exports.getBookingById = async (req, res) => {
                 },
                 {
                     model: RoomType,
-                    attributes: ['name', 'id']
+                    attributes: ['name', 'id', 'capacity', 'base_price']
                 },
                 {
                     model: Room,
                     required: false,
-                    include: {
-                        model: RoomType,
-                        attributes: ['name']
-                    }
+                    attributes: ['id', 'room_number', 'status']
                 }
             ]
         });
@@ -332,6 +338,7 @@ exports.getBookingById = async (req, res) => {
         res.json(booking);
     } catch (error) {
         console.error('Get booking by ID error:', error);
+        console.error('Error stack:', error.stack);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

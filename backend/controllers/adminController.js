@@ -147,10 +147,12 @@ exports.getGuests = async (req, res) => {
 // @access  Private/Admin
 exports.getGuestById = async (req, res) => {
     try {
+        console.log('Fetching guest with ID:', req.params.id);
         const guest = await User.findByPk(req.params.id, {
             attributes: { exclude: ['password'] }
         });
 
+        console.log('Guest found:', guest ? 'Yes' : 'No');
         if (!guest) {
             return res.status(404).json({ message: 'Guest not found' });
         }
@@ -161,16 +163,21 @@ exports.getGuestById = async (req, res) => {
             include: [
                 {
                     model: Room,
-                    include: [{ model: RoomType }]
+                    required: false,
+                    include: [{ model: RoomType, as: 'RoomType', required: false }]
+                },
+                {
+                    model: RoomType,
+                    required: false
                 }
             ],
-            order: [['created_at', 'DESC']]
+            order: [['check_in_date', 'DESC']]
         });
 
         const tourBookings = await TourBooking.findAll({
             where: { guest_id: req.params.id },
-            include: [{ model: Tour }],
-            order: [['created_at', 'DESC']]
+            include: [{ model: Tour, required: false }],
+            order: [['booking_date', 'DESC']]
         });
 
         // Calculate total spent
@@ -193,6 +200,31 @@ exports.getGuestById = async (req, res) => {
             roomBookings,
             tourBookings,
             totalSpent: parseFloat(totalRoom) + parseFloat(totalTour)
+        });
+    } catch (error) {
+        console.error('Error in getGuestById:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Suspend/Unsuspend a guest
+// @route   PUT /api/admin/guests/:id/suspend
+// @access  Private/Admin
+exports.suspendGuest = async (req, res) => {
+    try {
+        const { is_suspended } = req.body;
+        const guest = await User.findByPk(req.params.id);
+
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        guest.is_suspended = is_suspended;
+        await guest.save();
+
+        res.json({ 
+            message: `Guest ${is_suspended ? 'suspended' : 'unsuspended'} successfully`,
+            guest 
         });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -427,6 +459,7 @@ exports.getAllRooms = async (req, res) => {
         const rooms = await Room.findAll({
             include: {
                 model: RoomType,
+                as: 'RoomType',
                 attributes: ['name', 'base_price']
             },
             order: [['room_number', 'ASC']]
@@ -453,7 +486,7 @@ exports.createRoom = async (req, res) => {
         });
 
         const roomWithType = await Room.findByPk(room.id, {
-            include: { model: RoomType, attributes: ['name', 'base_price'] }
+            include: { model: RoomType, as: 'RoomType', attributes: ['name', 'base_price'] }
         });
 
         res.status(201).json(roomWithType);
@@ -478,7 +511,7 @@ exports.updateRoom = async (req, res) => {
             await room.save();
             
             const updatedRoom = await Room.findByPk(room.id, {
-                include: { model: RoomType, attributes: ['name', 'base_price'] }
+                include: { model: RoomType, as: 'RoomType', attributes: ['name', 'base_price'] }
             });
             
             res.json(updatedRoom);
@@ -521,15 +554,19 @@ exports.getAllBookings = async (req, res) => {
             include: [
                 {
                     model: Room,
-                    include: { model: RoomType, attributes: ['name'] }
+                    include: { model: RoomType, as: 'RoomType', attributes: ['name'] }
                 },
                 {
                     model: User,
                     as: 'Guest',
                     attributes: ['first_name', 'last_name', 'email']
+                },
+                {
+                    model: Invoice,
+                    attributes: ['id', 'status', 'total_amount']
                 }
             ],
-            order: [['check_in_date', 'DESC']]
+            order: [['id', 'DESC']]
         });
         console.log('getAllBookings - Found bookings:', bookings.length);
         res.json(bookings);
@@ -553,7 +590,7 @@ exports.getAllTourBookings = async (req, res) => {
                     attributes: ['first_name', 'last_name', 'email']
                 }
             ],
-            order: [['booking_date', 'DESC']]
+            order: [['id', 'DESC']]
         });
         console.log('getAllTourBookings - Found bookings:', bookings.length);
         res.json(bookings);
@@ -849,3 +886,283 @@ exports.assignRoomToBooking = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+// @desc    Mark booking as paid
+// @route   PUT /api/admin/bookings/:id/mark-paid
+// @access  Private/Admin
+exports.markBookingPaid = async (req, res) => {
+    try {
+        console.log('markBookingPaid called with ID:', req.params.id);
+        const booking = await Booking.findByPk(req.params.id);
+
+        if (!booking) {
+            console.log('Booking not found');
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        console.log('Current booking payment status:', booking.payment_status);
+        
+        // Update payment status to paid
+        booking.payment_status = 'paid';
+        booking.amount_paid = booking.total_price;
+        booking.balance_due = 0;
+        await booking.save();
+
+        // Also update the related invoice if it exists
+        const invoice = await Invoice.findOne({ where: { booking_id: booking.id } });
+        if (invoice && invoice.status !== 'paid') {
+            invoice.status = 'paid';
+            await invoice.save();
+            console.log('Invoice also marked as paid');
+        }
+
+        console.log('Booking marked as paid successfully');
+        res.json({ message: 'Booking marked as paid successfully', booking });
+    } catch (error) {
+        console.error('markBookingPaid error:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ message: 'Error updating payment status', error: error.message });
+    }
+};
+
+// @desc    Mark tour booking as paid
+// @route   PUT /api/admin/tour-bookings/:id/mark-paid
+// @access  Private/Admin
+exports.markTourBookingPaid = async (req, res) => {
+    try {
+        console.log('markTourBookingPaid called with ID:', req.params.id);
+        const booking = await TourBooking.findByPk(req.params.id);
+
+        if (!booking) {
+            console.log('Tour booking not found');
+            return res.status(404).json({ message: 'Tour booking not found' });
+        }
+
+        console.log('Current tour booking payment status:', booking.payment_status);
+        
+        // Update payment status to paid
+        booking.payment_status = 'paid';
+        booking.amount_paid = booking.total_price;
+        booking.balance_due = 0;
+        await booking.save();
+
+        // Also update the related invoice if it exists
+        const invoice = await Invoice.findOne({ where: { tour_booking_id: booking.id } });
+        if (invoice && invoice.status !== 'paid') {
+            invoice.status = 'paid';
+            await invoice.save();
+            console.log('Invoice also marked as paid');
+        }
+
+        console.log('Tour booking marked as paid successfully');
+        res.json({ message: 'Tour booking marked as paid successfully', booking });
+    } catch (error) {
+        console.error('markTourBookingPaid error:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ message: 'Error updating payment status', error: error.message });
+    }
+};
+
+// @desc    Mark room booking as refunded and send email
+// @route   PUT /api/admin/bookings/:id/refund
+// @access  Private/Admin
+exports.refundBooking = async (req, res) => {
+    try {
+        console.log('refundBooking called for booking ID:', req.params.id);
+        
+        const booking = await Booking.findByPk(req.params.id, {
+            include: [
+                {
+                    model: User,
+                    as: 'Guest',
+                    attributes: ['first_name', 'last_name', 'email']
+                },
+                {
+                    model: Room,
+                    include: { model: RoomType, as: 'RoomType', attributes: ['name'] }
+                }
+            ]
+        });
+
+        if (!booking) {
+            console.log('Booking not found');
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        console.log('Booking found:', {
+            id: booking.id,
+            status: booking.status,
+            refunded: booking.refunded,
+            amount_paid: booking.amount_paid
+        });
+
+        if (booking.status !== 'cancelled') {
+            console.log('Booking not cancelled, status:', booking.status);
+            return res.status(400).json({ message: 'Only cancelled bookings can be refunded' });
+        }
+
+        if (booking.refunded) {
+            console.log('Booking already refunded');
+            return res.status(400).json({ message: 'Booking has already been refunded' });
+        }
+
+        // Update booking as refunded
+        booking.refunded = true;
+        booking.refund_date = new Date();
+        booking.status = 'refunded';
+        booking.payment_status = 'refunded';
+        booking.balance_due = 0;
+        await booking.save();
+
+        // Update related invoice status to refunded
+        const Invoice = require('../models/Invoice');
+        const invoice = await Invoice.findOne({ where: { booking_id: booking.id } });
+        if (invoice) {
+            invoice.status = 'refunded';
+            await invoice.save();
+            console.log('Invoice also marked as refunded');
+        }
+
+        console.log('Booking marked as refunded, attempting to send email...');
+
+        // Send refund confirmation email
+        try {
+            const { sendRefundConfirmation } = require('../utils/emailService');
+            
+            const refundAmount = booking.amount_paid || booking.total_price;
+            const roomTypeName = booking.Room?.RoomType?.name || 'Room';
+            const guestName = `${booking.Guest.first_name} ${booking.Guest.last_name}`;
+
+            const refundDetails = {
+                'Booking ID': `#${booking.id}`,
+                'Room Type': roomTypeName,
+                'Check-in Date': new Date(booking.check_in_date).toLocaleDateString(),
+                'Check-out Date': new Date(booking.check_out_date).toLocaleDateString(),
+                'Refund Amount': `₱${parseFloat(refundAmount).toLocaleString()}`,
+                'Payment Method': booking.payment_method || 'N/A'
+            };
+
+            const emailSent = await sendRefundConfirmation(
+                booking.Guest.email,
+                guestName,
+                refundDetails
+            );
+
+            if (emailSent) {
+                console.log('Refund email sent successfully');
+                res.json({ message: 'Refund processed and confirmation email sent', booking });
+            } else {
+                res.json({ message: 'Refund processed successfully (email notification failed)', booking });
+            }
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError);
+            // Still return success since the refund was processed
+            res.json({ message: 'Refund processed successfully (email notification failed)', booking });
+        }
+    } catch (error) {
+        console.error('refundBooking error:', error);
+        res.status(500).json({ message: 'Error processing refund', error: error.message });
+    }
+};
+
+// @desc    Mark tour booking as refunded and send email
+// @route   PUT /api/admin/tour-bookings/:id/refund
+// @access  Private/Admin
+exports.refundTourBooking = async (req, res) => {
+    try {
+        console.log('refundTourBooking called for booking ID:', req.params.id);
+        
+        const booking = await TourBooking.findByPk(req.params.id, {
+            include: [
+                {
+                    model: User,
+                    as: 'Guest',
+                    attributes: ['first_name', 'last_name', 'email']
+                },
+                {
+                    model: Tour,
+                    attributes: ['name', 'price']
+                }
+            ]
+        });
+
+        if (!booking) {
+            console.log('Tour booking not found');
+            return res.status(404).json({ message: 'Tour booking not found' });
+        }
+
+        console.log('Tour booking found:', {
+            id: booking.id,
+            status: booking.status,
+            refunded: booking.refunded,
+            amount_paid: booking.amount_paid
+        });
+
+        if (booking.status !== 'cancelled') {
+            console.log('Tour booking not cancelled, status:', booking.status);
+            return res.status(400).json({ message: 'Only cancelled bookings can be refunded' });
+        }
+
+        if (booking.refunded) {
+            console.log('Tour booking already refunded');
+            return res.status(400).json({ message: 'Booking has already been refunded' });
+        }
+
+        // Update booking as refunded
+        booking.refunded = true;
+        booking.refund_date = new Date();
+        booking.status = 'refunded';
+        booking.payment_status = 'refunded';
+        booking.balance_due = 0;
+        await booking.save();
+
+        // Update related invoice status to refunded
+        const Invoice = require('../models/Invoice');
+        const invoice = await Invoice.findOne({ where: { tour_booking_id: booking.id } });
+        if (invoice) {
+            invoice.status = 'refunded';
+            await invoice.save();
+            console.log('Invoice also marked as refunded');
+        }
+
+        console.log('Tour booking marked as refunded, attempting to send email...');
+
+        // Send refund confirmation email
+        try {
+            const { sendTourRefundConfirmation } = require('../utils/emailService');
+            
+            const refundAmount = booking.amount_paid || booking.total_price;
+            const guestName = `${booking.Guest.first_name} ${booking.Guest.last_name}`;
+
+            const refundDetails = {
+                'Booking ID': `#${booking.id}`,
+                'Tour': booking.Tour?.name || 'Tour',
+                'Tour Date': new Date(booking.booking_date).toLocaleDateString(),
+                'Number of Pax': booking.number_of_pax,
+                'Refund Amount': `₱${parseFloat(refundAmount).toLocaleString()}`,
+                'Payment Method': booking.payment_method || 'N/A'
+            };
+
+            const emailSent = await sendTourRefundConfirmation(
+                booking.Guest.email,
+                guestName,
+                refundDetails
+            );
+
+            if (emailSent) {
+                console.log('Refund email sent successfully');
+                res.json({ message: 'Refund processed and confirmation email sent', booking });
+            } else {
+                res.json({ message: 'Refund processed successfully (email notification failed)', booking });
+            }
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError);
+            // Still return success since the refund was processed
+            res.json({ message: 'Refund processed successfully (email notification failed)', booking });
+        }
+    } catch (error) {
+        console.error('refundTourBooking error:', error);
+        res.status(500).json({ message: 'Error processing refund', error: error.message });
+    }
+};
+

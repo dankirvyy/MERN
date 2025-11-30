@@ -90,6 +90,10 @@ const User = sequelize.define('User', {
     last_contacted_at: {
         type: DataTypes.DATE,
         allowNull: true,
+    },
+    is_suspended: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
     }
     // <<< CONFLICTING 'created_at' and 'updated_at' BLOCKS REMOVED FROM HERE >>>
 }, {

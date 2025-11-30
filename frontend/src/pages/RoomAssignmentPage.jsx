@@ -43,8 +43,9 @@ const RoomAssignmentPage = () => {
         } catch (error) {
             console.error('Error fetching data:', error);
             console.error('Error response:', error.response);
-            const errorMessage = error.response?.data?.message || error.message || 'Error loading booking details';
-            alert(errorMessage);
+            console.error('Error response data:', error.response?.data);
+            const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error loading booking details';
+            alert(`Error: ${errorMessage}`);
             setLoading(false);
         }
     };
@@ -131,18 +132,18 @@ const RoomAssignmentPage = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600">Number of Guests</label>
-                                <p className="mt-1 text-lg">{booking?.num_guests}</p>
+                                <p className="mt-1 text-lg">{booking?.num_guests || 1}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600">Check-in</label>
                                 <p className="mt-1 text-lg">
-                                    {new Date(booking?.check_in_date).toLocaleDateString()} at {booking?.check_in_time}
+                                    {booking?.check_in_date ? new Date(booking.check_in_date).toLocaleDateString() : 'N/A'} at {booking?.check_in_time || 'N/A'}
                                 </p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600">Check-out</label>
                                 <p className="mt-1 text-lg">
-                                    {new Date(booking?.check_out_date).toLocaleDateString()} at {booking?.check_out_time}
+                                    {booking?.check_out_date ? new Date(booking.check_out_date).toLocaleDateString() : 'N/A'} at {booking?.check_out_time || 'N/A'}
                                 </p>
                             </div>
                         </div>
@@ -182,7 +183,7 @@ const RoomAssignmentPage = () => {
                                             <p className="text-sm text-gray-600">{room.RoomType?.name}</p>
                                             <p className="text-sm text-gray-500">
                                                 Capacity: {room.RoomType?.capacity} guests | 
-                                                ₱{parseFloat(room.RoomType?.price).toLocaleString()} per night
+                                                ₱{parseFloat(room.RoomType?.base_price || 0).toLocaleString()} per night
                                             </p>
                                         </div>
                                         <div className="text-right">
